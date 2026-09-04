@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>CareLoop — Cognitive Games Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="../shared/voiceManager.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/translations.js"></script>
+  <script src="../shared/api.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: #FFFFFF;
+      color: #0f172a;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+
+    /* Hide scrollbars while preserving scroll */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+    html, body { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .game-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 24px;
+      padding: 20px 16px;
+      min-height: 155px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+    .game-card:hover {
+      background: #F8FAFC;
+      border-color: #3B82F6;
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(59, 130, 246, 0.12);
+    }
+    .game-card:active {
+      transform: scale(0.96);
+    }
+
+    .icon-badge {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    }
+
+    .dot-active { background-color: #2563EB; }
+    .dot-inactive { background-color: #E2E8F0; }
+  </style>
+</head>
+<body class="p-4 sm:p-5 pb-24 overflow-y-auto no-scrollbar max-w-[412px] mx-auto w-full flex flex-col justify-between">
+
+  <div class="max-w-[412px] mx-auto w-full pb-24">
+
+    <!-- TOP HEADER -->
+    <header class="mb-5 pt-2 flex items-center justify-between border-b border-[#E8EFEA] pb-3">
+      <div class="flex items-center gap-3">
+        <button onclick="goBackHome()" class="w-10 h-10 rounded-full bg-[#F4F7F5] flex items-center justify-center text-[#12201A] active:scale-95 transition-transform" title="Back to home">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-[#12201A]" id="lbl-games-hub-title">Brain Exercises</h1>
+          <p class="text-xs text-[#527863] font-medium" id="lbl-games-hub-sub">Gentle cognitive training</p>
+        </div>
+      </div>
+
+      <span class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+        7 Active
+      </span>
+    </header>
+
+    <!-- 7 ACTIVE GAMES GRID (Minimalist Vector Art Badges) -->
+    <main class="grid grid-cols-2 gap-3.5 mb-6">
+
+      <!-- TILE 1: MEMORY MATCH -->
+      <div onclick="launchGame('04-game-session-memory-match.html')" class="game-card">
+        <div class="icon-badge bg-blue-50 text-blue-600 border border-blue-200">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        </div>
+        <h2 class="text-base font-bold text-[#12201A] text-center leading-tight" id="lbl-g1-title">Memory Match</h2>
+        <div class="flex gap-1.5">
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-inactive"></div>
+        </div>
+        <span class="text-xs font-bold text-blue-600 lbl-play-cta">Play Session →</span>
+      </div>
+
+      <!-- TILE 2: FAMILY FACES -->
+      <div onclick="launchGame('04b-game-family-faces.html')" class="game-card">
+        <div class="icon-badge bg-[#EEF4FD] text-[#3B82F6] border border-[#D3E3FA]">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 20v-1a6 6 0 0112 0v1"/></svg>
+        </div>
+        <h2 class="text-base font-bold text-[#12201A] text-center leading-tight" id="lbl-g2-title">Family Faces</h2>
+        <div class="flex gap-1.5">
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-inactive"></div>
+          <div class="w-2 h-2 rounded-full dot-inactive"></div>
+        </div>
+        <span class="text-xs font-bold text-[#3B82F6]">Play Session →</span>
+      </div>
+
+      <!-- TILE 3: SEQUENCE MEMORY -->
+      <div onclick="launchGame('04c-game-sequence.html')" class="game-card">
+        <div class="icon-badge bg-[#FCF4E3] text-[#D97706] border border-[#F7DFB0]">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="2" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="2" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="2" stroke-width="2"/></svg>
+        </div>
+        <h2 class="text-base font-bold text-[#12201A] text-center leading-tight">Sequence</h2>
+        <div class="flex gap-1.5">
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+        </div>
+        <span class="text-xs font-bold text-[#D97706]">Play Session →</span>
+      </div>
+
+      <!-- TILE 4: PATTERN CLOCK -->
+      <div onclick="launchGame('04d-game-pattern-clock.html')" class="game-card">
+        <div class="icon-badge bg-[#FAF0F4] text-[#DB2777] border border-[#F7D8E6]">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"/></svg>
+        </div>
+        <h2 class="text-base font-bold text-[#12201A] text-center leading-tight" id="lbl-g4-title">Pattern Clock</h2>
+        <div class="flex gap-1.5">
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-inactive"></div>
+          <div class="w-2 h-2 rounded-full dot-inactive"></div>
+        </div>
+        <span class="text-xs font-bold text-[#DB2777]">Play Session →</span>
+      </div>
+
+      <!-- TILE 5: COLOR & PATTERN RECALL (Spatial & Sequence Memory) -->
+      <div onclick="launchGame('04e-game-color-pattern.html')" class="game-card">
+        <div class="icon-badge bg-[#EAF5F0] text-[#0D9488] border border-[#B5E0CE]">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="7" cy="7" r="4" stroke-width="2"/><circle cx="17" cy="7" r="4" stroke-width="2"/><circle cx="7" cy="17" r="4" stroke-width="2"/><circle cx="17" cy="17" r="4" stroke-width="2"/></svg>
+        </div>
+        <h2 class="text-base font-bold text-[#12201A] text-center leading-tight">Color & Pattern</h2>
+        <div class="flex gap-1.5">
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-inactive"></div>
+        </div>
+        <span class="text-xs font-bold text-[#0D9488]">Play Session →</span>
+      </div>
+
+      <!-- TILE 6: STORY RECALL (Auditory Attention & Narrative Recall) -->
+      <div onclick="launchGame('04f-game-story-recall.html')" class="game-card">
+        <div class="icon-badge bg-[#FEF9EE] text-[#D97706] border border-[#F8D8A7]">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        </div>
+        <h2 class="text-base font-bold text-[#12201A] text-center leading-tight" id="lbl-g6-title">Story Recall</h2>
+        <div class="flex gap-1.5">
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-inactive"></div>
+          <div class="w-2 h-2 rounded-full dot-inactive"></div>
+        </div>
+        <span class="text-xs font-bold text-[#D97706]">Play Session →</span>
+      </div>
+
+      <!-- TILE 7: DAILY OBJECTS (Short-Term Visual Retention) -->
+      <div onclick="launchGame('04g-game-daily-objects.html')" class="game-card col-span-2">
+        <div class="icon-badge bg-[#EEF4FD] text-[#2563EB] border border-[#BFDBFE]">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        </div>
+        <h2 class="text-base font-bold text-[#12201A] text-center leading-tight">Daily Objects Recall</h2>
+        <div class="flex gap-1.5">
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-active"></div>
+          <div class="w-2 h-2 rounded-full dot-inactive"></div>
+        </div>
+        <span class="text-xs font-bold text-[#2563EB]">Play Session →</span>
+      </div>
+
+    </main>
+
+    <!-- CLINICAL WELLNESS NOTICE -->
+    <div class="bg-[#F8FAF9] border border-[#E3ECE7] rounded-2xl p-4 text-center">
+      <div class="w-8 h-8 rounded-full bg-[#EAF5EF] text-[#2E9E63] flex items-center justify-center mx-auto mb-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <h3 class="text-sm font-bold text-[#12201A]">Daily Cognitive Benefit</h3>
+      <p class="text-xs text-[#527863] mt-1 leading-relaxed">
+        10 minutes of pattern recall daily helps preserve temporal focus and neural connection.
+      </p>
+    </div>
+
+  </div>
+
+  <script>
+    function launchGame(file) {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      window.location.href = file;
+    }
+
+    function goBackHome() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      window.parent.postMessage({
+        type: 'navigate',
+        route: { role: 'patient', file: '01-patient-home.html', id: '01' }
+      }, '*');
+    }
+
+    function applyLanguage(code) {
+      const activeCode = code || (typeof localStorage !== 'undefined' && (localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang'))) || 'en';
+      if (typeof window.applyTranslationsToDOM === 'function') {
+        window.applyTranslationsToDOM(activeCode);
+      }
+      if (!window.CARELOOP_TRANSLATIONS) return;
+      const t = window.CARELOOP_TRANSLATIONS[activeCode] || window.CARELOOP_TRANSLATIONS['en'] || {};
+
+      if (t.gamesHubTitle && document.getElementById('lbl-games-hub-title')) {
+        document.getElementById('lbl-games-hub-title').textContent = t.gamesHubTitle;
+      }
+      if (t.gamesHubSubtitle && document.getElementById('lbl-games-hub-sub')) {
+        document.getElementById('lbl-games-hub-sub').textContent = t.gamesHubSubtitle;
+      }
+      if (t.gameMemoryMatch && document.getElementById('lbl-g1-title')) document.getElementById('lbl-g1-title').textContent = t.gameMemoryMatch;
+      if (t.gameFamilyFaces && document.getElementById('lbl-g2-title')) document.getElementById('lbl-g2-title').textContent = t.gameFamilyFaces;
+      if (t.gameSequence && document.getElementById('lbl-g3-title')) document.getElementById('lbl-g3-title').textContent = t.gameSequence;
+      if (t.gamePatternClock && document.getElementById('lbl-g4-title')) document.getElementById('lbl-g4-title').textContent = t.gamePatternClock;
+      if (t.gameColorPattern && document.getElementById('lbl-g5-title')) document.getElementById('lbl-g5-title').textContent = t.gameColorPattern;
+      if (t.gameStoryRecall && document.getElementById('lbl-g6-title')) document.getElementById('lbl-g6-title').textContent = t.gameStoryRecall;
+      if (t.gameDailyObjects && document.getElementById('lbl-g7-title')) document.getElementById('lbl-g7-title').textContent = t.gameDailyObjects;
+
+      document.querySelectorAll('.lbl-play-cta').forEach(el => {
+        el.textContent = (t.tapToPlay || 'Play Session') + ' →';
+      });
+    }
+
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'languageChange' && e.data.code) {
+        applyLanguage(e.data.code);
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
+      applyLanguage(activeLang);
+    });
+  </script>
+</body>
+</html>

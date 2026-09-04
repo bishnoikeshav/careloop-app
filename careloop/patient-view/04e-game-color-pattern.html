@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>CareLoop — Color & Pattern Recall</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="../shared/voiceManager.js"></script>
+  <script src="../shared/gameState.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/api.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: #FFFFFF;
+      color: #12201A;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    .tile-pad {
+      min-height: 130px;
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      border: 3px solid transparent;
+      box-shadow: 0 4px 14px rgba(18, 32, 26, 0.05);
+    }
+    .tile-pad:active:not(.disabled) {
+      transform: scale(0.94);
+    }
+    .tile-pad.disabled {
+      cursor: default;
+    }
+
+    /* 4 Distinct Accessible Colors */
+    .pad-teal {
+      background: #EAF5F0;
+      border-color: #B5E0CE;
+      color: #0D9488;
+    }
+    .pad-teal.lit {
+      background: #0D9488 !important;
+      border-color: #0F766E !important;
+      color: #FFFFFF !important;
+      transform: scale(1.05);
+      box-shadow: 0 0 35px rgba(13, 148, 136, 0.7);
+    }
+
+    .pad-amber {
+      background: #FEF6E9;
+      border-color: #F8D8A7;
+      color: #D97706;
+    }
+    .pad-amber.lit {
+      background: #D97706 !important;
+      border-color: #B45309 !important;
+      color: #FFFFFF !important;
+      transform: scale(1.05);
+      box-shadow: 0 0 35px rgba(217, 119, 6, 0.7);
+    }
+
+    .pad-blue {
+      background: #EEF4FD;
+      border-color: #BFDBFE;
+      color: #2563EB;
+    }
+    .pad-blue.lit {
+      background: #2563EB !important;
+      border-color: #1D4ED8 !important;
+      color: #FFFFFF !important;
+      transform: scale(1.05);
+      box-shadow: 0 0 35px rgba(37, 99, 235, 0.7);
+    }
+
+    .pad-rose {
+      background: #FDF0F6;
+      border-color: #FBCFE8;
+      color: #DB2777;
+    }
+    .pad-rose.lit {
+      background: #DB2777 !important;
+      border-color: #BE185D !important;
+      color: #FFFFFF !important;
+      transform: scale(1.05);
+      box-shadow: 0 0 35px rgba(219, 39, 119, 0.7);
+    }
+
+    .pulse-glow {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.85; }
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-5 pb-24 overflow-y-auto max-w-[412px] mx-auto w-full">
+
+  <!-- TOP HEADER -->
+  <header class="flex items-center justify-between pb-3 border-b border-[#E8EFEA]">
+    <div class="flex items-center gap-3">
+      <button onclick="goBack()" class="w-11 h-11 rounded-full bg-[#F4F7F5] flex items-center justify-center text-[#12201A] active:scale-95 transition-transform" title="Back to Games">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-[#12201A]">Color & Pattern</h1>
+        <p class="text-xs text-[#527863] font-medium">Spatial & Sequence Memory</p>
+      </div>
+    </div>
+
+    <!-- Voice Assist Read-Aloud Button -->
+    <button onclick="speakCurrentPrompt()" class="w-10 h-10 rounded-full bg-[#EAF5EF] text-[#2E9E63] border border-[#BEE3CE] flex items-center justify-center active:scale-95 transition-transform cursor-pointer" title="Hear Prompt Aloud">
+      <span class="material-symbols-outlined text-[22px]">volume_up</span>
+    </button>
+  </header>
+
+  <!-- MAIN GAME CANVAS -->
+  <main class="max-w-[370px] mx-auto w-full my-auto py-3">
+
+    <!-- LEVEL & PROGRESS INDICATOR -->
+    <div class="flex items-center justify-between mb-3 px-1">
+      <span class="text-xs font-bold text-[#6B8C7A] uppercase tracking-wider" id="level-indicator">Level 1 of 2</span>
+      <div class="flex gap-2" id="progress-dots">
+        <div class="w-2.5 h-2.5 rounded-full bg-[#2E9E63]" id="dot-0"></div>
+        <div class="w-2.5 h-2.5 rounded-full bg-[#DCE5E0]" id="dot-1"></div>
+      </div>
+    </div>
+
+    <!-- PROMPT CARD (High Contrast, Gentle Feedback) -->
+    <div id="instruction-box" class="bg-[#F8FAF9] border-2 border-[#DCE5E0] rounded-2xl p-4 text-center mb-5 shadow-sm transition-all min-h-[76px] flex items-center justify-center">
+      <p id="prompt-text" class="text-base sm:text-lg font-bold text-[#12201A] leading-snug">
+        Watch carefully: which colors light up?
+      </p>
+    </div>
+
+    <!-- 2x2 COLOR TILES GRID -->
+    <div class="grid grid-cols-2 gap-3.5 mb-4">
+
+      <!-- TILE 0: MUTED TEAL -->
+      <button id="tile-0" onclick="handleTileTap(0)" class="tile-pad pad-teal" aria-label="Teal">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 20A7 7 0 0 1 4 13a7 7 0 0 1 7-7c4 0 9 2 9 14-4 0-9-1-9-7"/></svg>
+        <span class="text-sm font-bold tracking-wide">Muted Teal</span>
+      </button>
+
+      <!-- TILE 1: WARM AMBER -->
+      <button id="tile-1" onclick="handleTileTap(1)" class="tile-pad pad-amber" aria-label="Amber">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" stroke-width="2.5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41m14.14-14.14l-1.41 1.41"/></svg>
+        <span class="text-sm font-bold tracking-wide">Warm Amber</span>
+      </button>
+
+      <!-- TILE 2: SOFT SKY BLUE -->
+      <button id="tile-2" onclick="handleTileTap(2)" class="tile-pad pad-blue" aria-label="Sky Blue">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+        <span class="text-sm font-bold tracking-wide">Sky Blue</span>
+      </button>
+
+      <!-- TILE 3: GENTLE ROSE -->
+      <button id="tile-3" onclick="handleTileTap(3)" class="tile-pad pad-rose" aria-label="Gentle Rose">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2.5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 2a4 4 0 0 0-4 4c0 3 4 6 4 6s4-3 4-6a4 4 0 0 0-4-4zm0 20a4 4 0 0 0 4-4c0-3-4-6-4-6s-4 3-4 6a4 4 0 0 0 4 4zm10-10a4 4 0 0 0-4-4c-3 0-6 4-6 4s3 4 6 4a4 4 0 0 0 4-4zm-20 0a4 4 0 0 0 4 4c3 0 6-4 6-4s-3-4-6-4a4 4 0 0 0 4 4z"/></svg>
+        <span class="text-sm font-bold tracking-wide">Gentle Rose</span>
+      </button>
+
+    </div>
+
+    <!-- REPLAY PATTERN GENTLE HELPER BUTTON -->
+    <div class="text-center pt-2">
+      <button id="btn-replay" onclick="replayCurrentPattern()" class="text-sm font-semibold text-[#2E9E63] hover:underline inline-flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-[#EAF5EF] transition-all cursor-pointer">
+        <span class="material-symbols-outlined text-base">replay</span>
+        <span>Watch pattern again</span>
+      </button>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="text-center py-2 border-t border-[#E8EFEA]">
+    <p class="text-xs text-[#6B8C7A] font-medium">
+      Calm pace · Take all the time you need
+    </p>
+  </footer>
+
+  <!-- STANDARD GAME RESULT SCREEN (Overlay) -->
+  <div id="celebration-overlay" class="fixed inset-0 bg-white/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div class="w-20 h-20 bg-[#2E9E63] rounded-full flex items-center justify-center text-white mb-4 shadow-xl pulse-glow">
+      <span class="material-symbols-outlined text-[42px]">check</span>
+    </div>
+
+    <h2 class="text-3xl font-extrabold text-[#12201A] mb-1.5 tracking-tight">Wonderful focus!</h2>
+    <p class="text-base text-[#527863] max-w-xs mb-6 leading-relaxed">
+      You successfully recalled the color sequence. Your visual attention and memory are sharp!
+    </p>
+
+    <!-- Score & Accuracy Summary Card -->
+    <div class="bg-[#F8FAF9] border border-[#DCE5E0] rounded-2xl p-4 w-full max-w-xs mb-6 flex justify-around shadow-sm">
+      <div>
+        <div class="text-2xl font-black text-[#2E9E63]" id="summary-accuracy">100%</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-bold tracking-wider">Accuracy</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-black text-[#12201A]" id="summary-time">18s</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-bold tracking-wider">Time</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-black text-[#2E9E63]" id="summary-cas">94</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-bold tracking-wider">CAS Score</div>
+      </div>
+    </div>
+
+    <!-- Large Primary Action Buttons (Min 56px height) -->
+    <div class="flex flex-col gap-3.5 w-full max-w-xs">
+      <button onclick="playAgain()" class="w-full h-14 bg-[#2E9E63] hover:bg-[#258552] text-white rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
+        <span>PLAY AGAIN</span>
+        <span class="material-symbols-outlined text-[20px]">replay</span>
+      </button>
+      <button onclick="goBack()" class="w-full h-14 bg-[#F4F7F5] hover:bg-[#EAF1ED] text-[#12201A] border-2 border-[#DCE5E0] rounded-2xl font-bold text-base active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+        <span>BACK TO GAMES</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // --- Audio Frequencies for Each Color (Calm Musical Arpeggio) ---
+    const TILE_FREQS = [392.00, 440.00, 523.25, 587.33]; // G4, A4, C5, D5
+    const TILE_NAMES = ["Muted Teal", "Warm Amber", "Sky Blue", "Gentle Rose"];
+
+    // Levels sequence definition
+    let currentLevel = 1; // Level 1 (2 steps), Level 2 (3 steps)
+    const MAX_LEVEL = 2;
+    let sequence = [];
+    let userStep = 0;
+    let isDemonstrating = false;
+    let startTime = null;
+    let totalAttempts = 0;
+    let correctAttempts = 0;
+    let currentPrompt = "";
+
+    function setPrompt(text, audioText) {
+      currentPrompt = audioText || text;
+      const el = document.getElementById('prompt-text');
+      if (el) el.textContent = text;
+    }
+
+    let activeUtterance = null;
+
+    function speakCurrentPrompt() {
+      if (window.VoiceManager) {
+        window.VoiceManager.speak(currentPrompt, { rate: 0.88 });
+      } else if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(currentPrompt);
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.88;
+        activeUtterance = utterance;
+        window._activeUtterance = utterance;
+        utterance.onend = () => { activeUtterance = null; };
+        utterance.onerror = () => { activeUtterance = null; };
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function playTileTone(index) {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = window.careLoopSound && window.careLoopSound.ctx ? window.careLoopSound.ctx : new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(TILE_FREQS[index] || 440, ctx.currentTime);
+
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.6);
+      } catch (e) {}
+    }
+
+    function setPadsDisabled(disabled) {
+      for (let i = 0; i < 4; i++) {
+        const pad = document.getElementById(`tile-${i}`);
+        if (pad) {
+          if (disabled) pad.classList.add('disabled');
+          else pad.classList.remove('disabled');
+        }
+      }
+      const replayBtn = document.getElementById('btn-replay');
+      if (replayBtn) replayBtn.disabled = disabled;
+    }
+
+    function startLevel(level) {
+      currentLevel = level;
+      userStep = 0;
+      document.getElementById('level-indicator').textContent = `Level ${level} of ${MAX_LEVEL}`;
+      
+      // Update progress dots
+      document.getElementById('dot-0').className = level >= 1 ? 'w-2.5 h-2.5 rounded-full bg-[#2E9E63]' : 'w-2.5 h-2.5 rounded-full bg-[#DCE5E0]';
+      document.getElementById('dot-1').className = level >= 2 ? 'w-2.5 h-2.5 rounded-full bg-[#2E9E63]' : 'w-2.5 h-2.5 rounded-full bg-[#DCE5E0]';
+
+      // Generate sequence: Level 1 has 2 steps, Level 2 has 3 steps
+      const length = level === 1 ? 2 : 3;
+      sequence = [];
+      for (let i = 0; i < length; i++) {
+        sequence.push(Math.floor(Math.random() * 4));
+      }
+
+      playDemonstration();
+    }
+
+    function playDemonstration() {
+      isDemonstrating = true;
+      setPadsDisabled(true);
+      setPrompt("Watch carefully: which colors light up?");
+      speakCurrentPrompt();
+
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i < sequence.length) {
+          flashTile(sequence[i]);
+          i++;
+        } else {
+          clearInterval(interval);
+          setTimeout(() => {
+            isDemonstrating = false;
+            setPadsDisabled(false);
+            setPrompt("Now tap the colors in the same order.");
+            speakCurrentPrompt();
+          }, 600);
+        }
+      }, 1200); // Calm 1.2 seconds per tile
+    }
+
+    function flashTile(index) {
+      const pad = document.getElementById(`tile-${index}`);
+      if (!pad) return;
+
+      pad.classList.add('lit');
+      playTileTone(index);
+
+      setTimeout(() => {
+        pad.classList.remove('lit');
+      }, 700);
+    }
+
+    function replayCurrentPattern() {
+      if (isDemonstrating) return;
+      playDemonstration();
+    }
+
+    function handleTileTap(index) {
+      if (isDemonstrating) return;
+
+      totalAttempts++;
+      flashTile(index);
+
+      const expected = sequence[userStep];
+      if (index === expected) {
+        correctAttempts++;
+        userStep++;
+
+        // Completed sequence for this level
+        if (userStep === sequence.length) {
+          setPadsDisabled(true);
+          if (window.careLoopSound) window.careLoopSound.playMatch();
+
+          if (currentLevel < MAX_LEVEL) {
+            setPrompt("Wonderful! Getting ready for Level 2...");
+            setTimeout(() => {
+              startLevel(currentLevel + 1);
+            }, 1500);
+          } else {
+            handleVictory();
+          }
+        }
+      } else {
+        // Zero-shaming / Non-punitive UX: Never show "Failed" or "Wrong"
+        setPadsDisabled(true);
+        if (window.careLoopSound) window.careLoopSound.playMismatch();
+        setPrompt("Take your time. Let's watch the pattern one more time.");
+        speakCurrentPrompt();
+
+        userStep = 0;
+        setTimeout(() => {
+          playDemonstration();
+        }, 2200);
+      }
+    }
+
+    function handleVictory() {
+      const elapsedSec = Math.max(12, Math.round((Date.now() - startTime) / 1000));
+      const accuracy = totalAttempts > 0 ? Math.min(100, Math.round((correctAttempts / totalAttempts) * 100)) : 100;
+      const casScore = Math.min(99, Math.round((accuracy * 0.65) + (Math.max(20, 100 - (elapsedSec * 1.2)) * 0.35)));
+
+      document.getElementById('summary-accuracy').textContent = accuracy + '%';
+      document.getElementById('summary-time').textContent = elapsedSec + 's';
+      document.getElementById('summary-cas').textContent = casScore;
+
+      if (window.careLoopSound) {
+        setTimeout(() => window.careLoopSound.playMatch(), 200);
+      }
+
+      // Record to shared backend and update CAS
+      if (window.careLoopApi) {
+        window.careLoopApi.recordGame({
+          gameType: 'color-pattern',
+          gameTitle: 'Color & Pattern Recall',
+          accuracy,
+          durationSec: elapsedSec,
+          moves: totalAttempts
+        });
+      }
+
+      if (window.CareLoopGameState) {
+        window.CareLoopGameState.addResult({
+          gameName: 'Color & Pattern Recall',
+          gameType: 'color-pattern',
+          score: accuracy,
+          durationSec: elapsedSec,
+          moves: totalAttempts
+        });
+      }
+
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function replayCurrentPattern() {
+      if (isDemonstrating) return;
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      userStep = 0;
+      playDemonstration();
+    }
+
+    function playAgain() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+      startTime = Date.now();
+      totalAttempts = 0;
+      correctAttempts = 0;
+      startLevel(1);
+    }
+
+    function goBack() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      window.location.href = '03-cognitive-games-hub.html';
+      window.parent.postMessage({
+        type: 'navigate',
+        route: { role: 'patient', file: '03-cognitive-games-hub.html', id: '03' }
+      }, '*');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      startTime = Date.now();
+      startLevel(1);
+    });
+  </script>
+</body>
+</html>

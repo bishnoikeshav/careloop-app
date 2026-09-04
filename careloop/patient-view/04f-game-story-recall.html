@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>CareLoop — Culturally Familiar Story Recall</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="../shared/voiceManager.js"></script>
+  <script src="../shared/gameState.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/api.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: #FFFFFF;
+      color: #12201A;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    .option-btn {
+      min-height: 68px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: #F8FAF9;
+      border: 2px solid #E3ECE7;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-align: left;
+      font-size: 16px;
+      font-weight: 700;
+      color: #12201A;
+      width: 100%;
+    }
+    .option-btn:hover {
+      background: #EAF5EF;
+      border-color: #2E9E63;
+      transform: translateY(-2px);
+    }
+    .option-btn:active {
+      transform: scale(0.97);
+    }
+    .option-btn.selected-correct {
+      background: #EAF5EF !important;
+      border-color: #2E9E63 !important;
+      color: #1E6B43 !important;
+    }
+    .option-btn.selected-wrong {
+      background: #FEF9EE !important;
+      border-color: #F5B942 !important;
+      color: #92400E !important;
+    }
+
+    .pulse-glow {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.85; }
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-5 pb-24 overflow-y-auto max-w-[412px] mx-auto w-full">
+
+  <!-- TOP HEADER -->
+  <header class="flex items-center justify-between pb-3 border-b border-[#E8EFEA]">
+    <div class="flex items-center gap-3">
+      <button onclick="goBack()" class="w-11 h-11 rounded-full bg-[#F4F7F5] flex items-center justify-center text-[#12201A] active:scale-95 transition-transform cursor-pointer" title="Back to Games">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-[#12201A]">Story Recall</h1>
+        <p class="text-xs text-[#527863] font-medium">Auditory Attention & Memory</p>
+      </div>
+    </div>
+
+    <!-- Voice Assist Read-Aloud Button -->
+    <button onclick="speakCurrentContext()" class="w-10 h-10 rounded-full bg-[#EAF5EF] text-[#2E9E63] border border-[#BEE3CE] flex items-center justify-center active:scale-95 transition-transform cursor-pointer" title="Read Aloud">
+      <span class="material-symbols-outlined text-[22px]">volume_up</span>
+    </button>
+  </header>
+
+  <!-- MAIN VIEW CONTAINER -->
+  <main class="max-w-[370px] mx-auto w-full my-auto py-2">
+
+    <!-- PHASE 1: STORY PRESENTATION VIEW -->
+    <div id="phase-story" class="space-y-4">
+      
+      <!-- Story Card (Warm, Accessible Healthcare Aesthetic) -->
+      <div class="bg-[#F8FAF9] border-2 border-[#DCE5E0] rounded-3xl p-5 shadow-sm space-y-4">
+        
+        <!-- Story Illustration Banner -->
+        <div class="w-full h-36 bg-gradient-to-br from-[#EAF5EF] to-[#D5EDE0] rounded-2xl flex items-center justify-center relative overflow-hidden border border-[#C6E6D4]">
+          <div class="flex items-center gap-4 text-[#2E9E63]">
+            <span class="material-symbols-outlined text-[54px]">nature</span>
+            <span class="material-symbols-outlined text-[42px] text-[#D97706]">local_florist</span>
+            <span class="material-symbols-outlined text-[48px] text-[#2563EB]">landscape</span>
+          </div>
+          <span class="absolute bottom-2.5 right-3 bg-white/90 text-[#12201A] text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-xs">
+            Morning in the Hills
+          </span>
+        </div>
+
+        <!-- Story Text Snippet -->
+        <div class="space-y-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-[#2E9E63]">Short Story</span>
+          <p id="story-snippet" class="text-lg font-bold text-[#12201A] leading-relaxed">
+            "Sunita walked to the local morning market in the hills. She bought fresh green tea leaves and fragrant yellow marigold flowers for her home."
+          </p>
+        </div>
+
+        <!-- Hear Story Audio Button -->
+        <button onclick="readStoryAloud()" class="w-full py-3 bg-[#EAF5EF] hover:bg-[#D5EDE0] text-[#1E6B43] rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-[#B5E0CE] active:scale-95 transition-all cursor-pointer">
+          <span class="material-symbols-outlined text-xl">volume_up</span>
+          <span>Hear Story Again</span>
+        </button>
+      </div>
+
+      <!-- Proceed Button (Massive Touch Target 60px+) -->
+      <button onclick="startQuestions()" class="w-full h-15 bg-[#2E9E63] hover:bg-[#258552] text-white rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
+        <span>I AM READY FOR THE QUESTIONS</span>
+        <span class="material-symbols-outlined text-xl">arrow_forward</span>
+      </button>
+
+    </div>
+
+    <!-- PHASE 2: RECALL QUESTIONS VIEW (Initially Hidden) -->
+    <div id="phase-questions" class="hidden space-y-4">
+
+      <!-- Question Counter & Badge -->
+      <div class="flex items-center justify-between px-1">
+        <span class="text-xs font-bold text-[#6B8C7A] uppercase tracking-wider" id="q-counter">Question 1 of 2</span>
+        <div class="flex gap-2" id="q-dots">
+          <div class="w-2.5 h-2.5 rounded-full bg-[#2E9E63]" id="qdot-0"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-[#DCE5E0]" id="qdot-1"></div>
+        </div>
+      </div>
+
+      <!-- Question Prompt Box -->
+      <div class="bg-[#F8FAF9] border-2 border-[#DCE5E0] rounded-2xl p-4 text-center shadow-sm min-h-[76px] flex items-center justify-center">
+        <h2 id="question-text" class="text-lg sm:text-xl font-bold text-[#12201A] leading-snug">
+          What did Sunita buy at the market?
+        </h2>
+      </div>
+
+      <!-- Answer Options (Large Touch Target Cards 68px) -->
+      <div class="space-y-3" id="options-container">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Positive Reinforcement Feedback Banner -->
+      <div id="feedback-banner" class="hidden p-3.5 rounded-2xl text-center text-sm font-bold border transition-all">
+        <span id="feedback-message"></span>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="text-center py-2 border-t border-[#E8EFEA]">
+    <p class="text-xs text-[#6B8C7A] font-medium">
+      Listen and remember · Zero time pressure
+    </p>
+  </footer>
+
+  <!-- STANDARD GAME RESULT SCREEN (Overlay) -->
+  <div id="celebration-overlay" class="fixed inset-0 bg-white/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div class="w-20 h-20 bg-[#2E9E63] rounded-full flex items-center justify-center text-white mb-4 shadow-xl pulse-glow">
+      <span class="material-symbols-outlined text-[42px]">check</span>
+    </div>
+
+    <h2 class="text-3xl font-extrabold text-[#12201A] mb-1.5 tracking-tight">Wonderful memory!</h2>
+    <p class="text-base text-[#527863] max-w-xs mb-6 leading-relaxed">
+      You remembered the story details clearly. Listening and narrative retention exercised!
+    </p>
+
+    <!-- Score & Accuracy Summary Card -->
+    <div class="bg-[#F8FAF9] border border-[#DCE5E0] rounded-2xl p-4 w-full max-w-xs mb-6 flex justify-around shadow-sm">
+      <div>
+        <div class="text-2xl font-black text-[#2E9E63]" id="summary-accuracy">100%</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-bold tracking-wider">Accuracy</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-black text-[#12201A]" id="summary-time">22s</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-bold tracking-wider">Time</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-black text-[#2E9E63]" id="summary-cas">95</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-bold tracking-wider">CAS Score</div>
+      </div>
+    </div>
+
+    <!-- Large Primary Action Buttons (Min 56px height) -->
+    <div class="flex flex-col gap-3.5 w-full max-w-xs">
+      <button onclick="playAgain()" class="w-full h-14 bg-[#2E9E63] hover:bg-[#258552] text-white rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
+        <span>PLAY AGAIN</span>
+        <span class="material-symbols-outlined text-[20px]">replay</span>
+      </button>
+      <button onclick="goBack()" class="w-full h-14 bg-[#F4F7F5] hover:bg-[#EAF1ED] text-[#12201A] border-2 border-[#DCE5E0] rounded-2xl font-bold text-base active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+        <span>BACK TO GAMES</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const STORY_TEXT = "Sunita walked to the local morning market in the hills. She bought fresh green tea leaves and fragrant yellow marigold flowers for her home.";
+
+    const QUESTIONS = [
+      {
+        question: "What did Sunita buy at the market?",
+        options: [
+          { text: "Green Tea & Flowers", icon: "emoji_food_beverage", iconColor: "text-[#2E9E63]", isCorrect: true },
+          { text: "Bread & Fresh Milk", icon: "bakery_dining", iconColor: "text-[#D97706]", isCorrect: false },
+          { text: "Red Apples & Rice", icon: "nutrition", iconColor: "text-[#DB2777]", isCorrect: false }
+        ],
+        affirmation: "That's right! Sunita bought fresh tea and flowers."
+      },
+      {
+        question: "Where did Sunita go this morning?",
+        options: [
+          { text: "The Hill Market", icon: "landscape", iconColor: "text-[#2E9E63]", isCorrect: true },
+          { text: "The Train Station", icon: "train", iconColor: "text-[#2563EB]", isCorrect: false },
+          { text: "The Health Clinic", icon: "local_hospital", iconColor: "text-[#7C3AED]", isCorrect: false }
+        ],
+        affirmation: "Wonderful! Sunita walked to the morning hill market."
+      }
+    ];
+
+    let currentQIndex = 0;
+    let startTime = null;
+    let totalAttempts = 0;
+    let correctAttempts = 0;
+    let activePrompt = STORY_TEXT;
+
+    let activeUtterance = null;
+
+    function speakText(text) {
+      if (window.VoiceManager) {
+        window.VoiceManager.speak(text, { rate: 0.88 });
+      } else if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.88; // Calm elderly cadence
+        activeUtterance = utterance;
+        window._activeUtterance = utterance;
+        utterance.onend = () => { activeUtterance = null; };
+        utterance.onerror = () => { activeUtterance = null; };
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function readStoryAloud() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      activePrompt = STORY_TEXT;
+      speakText(STORY_TEXT);
+    }
+
+    function speakCurrentContext() {
+      speakText(activePrompt);
+    }
+
+    function startQuestions() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      document.getElementById('phase-story').classList.add('hidden');
+      document.getElementById('phase-questions').classList.remove('hidden');
+      renderQuestion(0);
+    }
+
+    function renderQuestion(index) {
+      currentQIndex = index;
+      const qData = QUESTIONS[index];
+      activePrompt = qData.question;
+
+      document.getElementById('q-counter').textContent = `Question ${index + 1} of ${QUESTIONS.length}`;
+      document.getElementById('question-text').textContent = qData.question;
+      document.getElementById('feedback-banner').classList.add('hidden');
+
+      // Update progress dots
+      document.getElementById('qdot-0').className = index >= 0 ? 'w-2.5 h-2.5 rounded-full bg-[#2E9E63]' : 'w-2.5 h-2.5 rounded-full bg-[#DCE5E0]';
+      document.getElementById('qdot-1').className = index >= 1 ? 'w-2.5 h-2.5 rounded-full bg-[#2E9E63]' : 'w-2.5 h-2.5 rounded-full bg-[#DCE5E0]';
+
+      const container = document.getElementById('options-container');
+      container.innerHTML = '';
+
+      qData.options.forEach((opt, optIndex) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = `
+          <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow-xs border border-[#E3ECE7]">
+            <span class="material-symbols-outlined text-[28px] ${opt.iconColor}">${opt.icon}</span>
+          </div>
+          <span class="flex-1">${opt.text}</span>
+          <span class="material-symbols-outlined text-gray-300 opt-check text-xl">radio_button_unchecked</span>
+        `;
+        btn.onclick = () => selectOption(opt, btn, qData);
+        container.appendChild(btn);
+      });
+
+      speakText(qData.question);
+    }
+
+    function selectOption(opt, btn, qData) {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      totalAttempts++;
+      const allBtns = document.querySelectorAll('.option-btn');
+
+      if (opt.isCorrect) {
+        correctAttempts++;
+        btn.classList.add('correct');
+        const check = btn.querySelector('.opt-check');
+        if (check) {
+          check.textContent = 'check_circle';
+          check.className = 'material-symbols-outlined text-[#2E9E63] text-2xl';
+        }
+
+        if (window.careLoopSound) window.careLoopSound.playMatch();
+        showFeedback(qData.affirmation, true);
+        speakText(qData.affirmation);
+
+        allBtns.forEach(b => b.disabled = true);
+
+        setTimeout(() => {
+          if (currentQIndex + 1 < QUESTIONS.length) {
+            renderQuestion(currentQIndex + 1);
+          } else {
+            handleVictory();
+          }
+        }, 2200);
+
+      } else {
+        // Zero-shaming / Non-punitive UX
+        btn.classList.add('encouraged');
+        if (window.careLoopSound) window.careLoopSound.playClick();
+
+        const encouragement = "Great effort! Let's remember: Sunita went to the hill market for tea leaves and flowers.";
+        showFeedback(encouragement, false);
+        speakText(encouragement);
+
+        // Highlight correct option warmly after brief moment so user is supported
+        setTimeout(() => {
+          allBtns.forEach(b => {
+            if (b.innerText.includes('Tea') || b.innerText.includes('Hill')) {
+              b.classList.add('correct');
+            }
+          });
+        }, 800);
+
+        setTimeout(() => {
+          if (currentQIndex + 1 < QUESTIONS.length) {
+            renderQuestion(currentQIndex + 1);
+          } else {
+            handleVictory();
+          }
+        }, 3200);
+      }
+    }
+
+    function showFeedback(msg, isSuccess) {
+      const banner = document.getElementById('feedback-banner');
+      const text = document.getElementById('feedback-message');
+      text.textContent = msg;
+      banner.className = isSuccess
+        ? 'p-3.5 rounded-2xl text-center text-sm font-bold border bg-[#EAF5EF] border-[#BEE3CE] text-[#1E6B43]'
+        : 'p-3.5 rounded-2xl text-center text-sm font-bold border bg-[#FEF9EE] border-[#F8D8A7] text-[#92400E]';
+      banner.classList.remove('hidden');
+    }
+
+    function handleVictory() {
+      const elapsedSec = Math.max(14, Math.round((Date.now() - startTime) / 1000));
+      const accuracy = totalAttempts > 0 ? Math.min(100, Math.round((correctAttempts / totalAttempts) * 100)) : 100;
+      const casScore = Math.min(99, Math.round((accuracy * 0.70) + (Math.max(20, 100 - (elapsedSec * 1.1)) * 0.30)));
+
+      document.getElementById('summary-accuracy').textContent = accuracy + '%';
+      document.getElementById('summary-time').textContent = elapsedSec + 's';
+      document.getElementById('summary-cas').textContent = casScore;
+
+      if (window.careLoopSound) {
+        setTimeout(() => window.careLoopSound.playMatch(), 200);
+      }
+
+      // Record to shared backend and update CAS
+      if (window.careLoopApi) {
+        window.careLoopApi.recordGame({
+          gameType: 'story-recall',
+          gameTitle: 'Culturally Familiar Story Recall',
+          accuracy,
+          durationSec: elapsedSec,
+          moves: totalAttempts
+        });
+      }
+
+      if (window.CareLoopGameState) {
+        window.CareLoopGameState.addResult({
+          gameName: 'Story Recall',
+          gameType: 'story-recall',
+          score: accuracy,
+          durationSec: elapsedSec,
+          moves: totalAttempts
+        });
+      }
+
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function playAgain() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+      document.getElementById('phase-story').classList.remove('hidden');
+      document.getElementById('phase-questions').classList.add('hidden');
+      startTime = Date.now();
+      totalAttempts = 0;
+      correctAttempts = 0;
+      readStoryAloud();
+    }
+
+    function goBack() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      window.location.href = '03-cognitive-games-hub.html';
+      window.parent.postMessage({
+        type: 'navigate',
+        route: { role: 'patient', file: '03-cognitive-games-hub.html', id: '03' }
+      }, '*');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      startTime = Date.now();
+      // Auto speech read-aloud upon loading after initial user interaction or slight delay
+      setTimeout(readStoryAloud, 700);
+    });
+  </script>
+</body>
+</html>

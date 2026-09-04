@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CareLoop Caregiver Dashboard - Games &amp; Cognitive Analytics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="../shared/gameState.js"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-container": "#4ade94",
+                        "primary": "#6bfbae",
+                        "primary-fixed": "#6dfdaf",
+                        "surface": "#121514",
+                        "surface-raised": "#1A1E1C",
+                        "dashboard-canvas": "#0B0D0C",
+                        "dashboard-surface": "#121514",
+                        "dashboard-raised": "#1A1E1C",
+                        "dashboard-border": "#26302C",
+                        "dashboard-text-primary": "#F4F6F4",
+                        "dashboard-text-secondary": "#9BA8A2",
+                        "dashboard-accent-primary": "#4ADE94",
+                        "dashboard-accent-warn": "#F5B942",
+                        "dashboard-accent-danger": "#EF5A5A",
+                        "dashboard-mono-tag": "#7FE0AC"
+                    },
+                    fontFamily: {
+                        sans: ["Inter", "sans-serif"],
+                        mono: ["JetBrains Mono", "monospace"]
+                    }
+                }
+            }
+        };
+    </script>
+<style>
+    body { background-color: #0B0D0C; color: #F4F6F4; font-family: 'Inter', sans-serif; }
+    nav.fixed { display: none !important; }
+    main { margin-left: 0 !important; }
+    header { left: 0 !important; width: 100% !important; }
+    html.light body, html.light { background-color: #F8FAF8 !important; color: #12201A !important; }
+    html.light header { background-color: #FFFFFF !important; border-color: #DCE5E0 !important; }
+    html.light .bg-dashboard-surface { background-color: #FFFFFF !important; border-color: #DCE5E0 !important; }
+    html.light .bg-dashboard-raised { background-color: #F0F4F2 !important; border-color: #DCE5E0 !important; }
+    html.light .border-dashboard-border { border-color: #DCE5E0 !important; }
+    html.light .text-dashboard-text-primary { color: #12201A !important; }
+    html.light .text-dashboard-text-secondary { color: #527863 !important; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .material-symbols-outlined.filled { font-variation-settings: 'FILL' 1; }
+</style>
+</head>
+<body class="bg-dashboard-canvas text-dashboard-text-primary antialiased min-h-screen overflow-y-auto">
+
+<!-- TopNavBar -->
+<header class="h-16 bg-dashboard-surface border-b border-dashboard-border flex justify-between items-center px-6 sticky top-0 z-30">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-dashboard-raised border border-dashboard-border flex items-center justify-center text-dashboard-accent-primary font-bold">
+      <span class="material-symbols-outlined text-[18px]">psychology</span>
+    </div>
+    <div>
+      <h1 class="font-bold text-lg text-dashboard-text-primary">Games &amp; Cognitive Analytics</h1>
+      <p class="text-[11px] text-dashboard-text-secondary">Tracking multi-domain cognitive health and personal baseline</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-4">
+    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dashboard-raised border border-dashboard-border">
+      <span class="text-xs text-dashboard-text-secondary">Patient:</span>
+      <span class="text-xs text-dashboard-accent-primary font-bold font-mono" id="patient-name-display">Kamala Sharma</span>
+    </div>
+    <button onclick="parentNavigate('08b-auth-onboarding-wizard.html','Onboarding Wizard','ONBOARD / 08B')" class="text-xs text-dashboard-text-secondary hover:text-dashboard-accent-primary flex items-center gap-1 transition-colors py-1 px-2 rounded hover:bg-dashboard-raised cursor-pointer" title="Edit patient profile">
+      <span class="material-symbols-outlined text-[16px]">edit</span>
+    </button>
+  </div>
+</header>
+
+<!-- Main Scrollable Area -->
+<main class="p-6 max-w-7xl mx-auto space-y-6">
+
+  <!-- ROW 1: Filter Bar -->
+  <section class="bg-dashboard-surface rounded-xl border border-dashboard-border p-4 flex flex-wrap gap-4 items-center justify-between shadow-sm">
+    <div class="flex gap-4 items-center flex-wrap">
+      <!-- Date Range -->
+      <button onclick="selectDateRange()" class="flex items-center gap-2 bg-dashboard-raised border border-dashboard-border rounded-lg px-3.5 py-1.5 hover:border-dashboard-accent-primary transition-colors group cursor-pointer">
+        <span class="material-symbols-outlined text-dashboard-text-secondary group-hover:text-dashboard-accent-primary transition-colors text-sm">calendar_today</span>
+        <span class="text-xs text-dashboard-text-primary font-mono" id="date-range-label">Last 30 Days (Aug 1 - Sep 4)</span>
+        <span class="material-symbols-outlined text-dashboard-text-secondary text-sm">arrow_drop_down</span>
+      </button>
+
+      <div class="h-5 w-px bg-dashboard-border hidden sm:block"></div>
+
+      <!-- Game Category Filter Chips -->
+      <div class="flex gap-2 flex-wrap" id="game-filter-chips">
+        <button onclick="filterGameDomain('all', this)" class="px-3 py-1 rounded-full bg-dashboard-accent-primary/15 border border-dashboard-accent-primary/40 text-dashboard-accent-primary text-xs font-semibold transition-all cursor-pointer filter-chip active">
+          All Games
+        </button>
+        <button onclick="filterGameDomain('memory', this)" class="px-3 py-1 rounded-full bg-dashboard-raised border border-dashboard-border text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary transition-all cursor-pointer filter-chip">
+          Memory Match
+        </button>
+        <button onclick="filterGameDomain('faces', this)" class="px-3 py-1 rounded-full bg-dashboard-raised border border-dashboard-border text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary transition-all cursor-pointer filter-chip">
+          Face Recall
+        </button>
+        <button onclick="filterGameDomain('sequence', this)" class="px-3 py-1 rounded-full bg-dashboard-raised border border-dashboard-border text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary transition-all cursor-pointer filter-chip">
+          Sequence
+        </button>
+        <button onclick="filterGameDomain('clock', this)" class="px-3 py-1 rounded-full bg-dashboard-raised border border-dashboard-border text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary transition-all cursor-pointer filter-chip">
+          Pattern Clock
+        </button>
+        <button onclick="filterGameDomain('color', this)" class="px-3 py-1 rounded-full bg-dashboard-raised border border-dashboard-border text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary transition-all cursor-pointer filter-chip">
+          Color Pattern
+        </button>
+        <button onclick="filterGameDomain('story', this)" class="px-3 py-1 rounded-full bg-dashboard-raised border border-dashboard-border text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary transition-all cursor-pointer filter-chip">
+          Story Recall
+        </button>
+        <button onclick="filterGameDomain('objects', this)" class="px-3 py-1 rounded-full bg-dashboard-raised border border-dashboard-border text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary transition-all cursor-pointer filter-chip">
+          Daily Objects
+        </button>
+      </div>
+    </div>
+
+    <!-- Difficulty Toggle -->
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-dashboard-text-secondary font-medium">Difficulty Mode:</span>
+      <div class="flex bg-dashboard-raised rounded-lg border border-dashboard-border p-1">
+        <button id="diff-adaptive" onclick="setDifficulty('adaptive')" class="px-3 py-1 rounded bg-dashboard-surface text-dashboard-accent-primary text-xs font-semibold shadow-sm cursor-pointer transition-all">
+          Adaptive
+        </button>
+        <button id="diff-fixed" onclick="setDifficulty('fixed')" class="px-3 py-1 rounded text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary cursor-pointer transition-all">
+          Fixed
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROW 2: CAS Trend Chart (Code Editor Style) -->
+  <section class="bg-dashboard-surface rounded-xl border border-dashboard-border overflow-hidden flex flex-col shadow-lg">
+    <div class="bg-dashboard-raised border-b border-dashboard-border px-4 py-2.5 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-[#EF5A5A]/30 border border-[#EF5A5A]/60"></div>
+        <div class="w-3 h-3 rounded-full bg-[#F5B942]/30 border border-[#F5B942]/60"></div>
+        <div class="w-3 h-3 rounded-full bg-[#4ADE94]/30 border border-[#4ADE94]/60"></div>
+        <span class="font-mono text-xs text-dashboard-text-secondary ml-2 flex items-center gap-1.5 font-medium">
+          <span class="material-symbols-outlined text-[14px]">terminal</span>
+          ANALYTICS.TSX
+        </span>
+      </div>
+      <span class="font-mono text-[10px] text-dashboard-accent-primary bg-dashboard-accent-primary/10 px-2 py-0.5 rounded border border-dashboard-accent-primary/20 uppercase font-semibold">
+        COGNITIVE / 01
+      </span>
+    </div>
+
+    <div class="p-6 relative flex flex-col">
+      <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+        <div>
+          <h3 class="font-bold text-dashboard-text-primary text-lg" id="chart-domain-title">Cognitive Activity Score (CAS) Trend</h3>
+          <p class="text-xs text-dashboard-text-secondary mt-0.5" id="chart-domain-sub">30-day moving average of multi-domain cognitive performance vs. personal baseline.</p>
+        </div>
+        <div class="text-right">
+          <div class="text-3xl font-bold font-mono text-dashboard-text-primary" id="cas-score-display">84<span class="text-lg text-dashboard-text-secondary">/100</span></div>
+          <div class="font-mono text-xs text-dashboard-accent-primary flex items-center justify-end gap-1 mt-1 font-semibold">
+            <span class="material-symbols-outlined text-[14px]">trending_up</span>
+            +2.4% vs baseline
+          </div>
+        </div>
+      </div>
+
+      <!-- Vector Line Chart with Anomaly Detection and Tooltip -->
+      <div class="relative w-full h-[220px] border-b border-l border-dashboard-border pb-2 pl-4">
+        <!-- Y Axis Labels -->
+        <div class="absolute left-[-24px] top-0 bottom-2 flex flex-col justify-between text-dashboard-text-secondary font-mono text-[10px] items-end h-full py-1">
+          <span>100</span>
+          <span>80</span>
+          <span>60</span>
+          <span>40</span>
+          <span>20</span>
+        </div>
+
+        <!-- SVG Line approximation -->
+        <div class="absolute inset-2 w-[calc(100%-8px)] h-[calc(100%-8px)]">
+          <svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 1000 200">
+            <!-- Grid Lines -->
+            <line stroke="#26302C" stroke-dasharray="4,4" stroke-width="1" x1="0" x2="1000" y1="40" y2="40"></line>
+            <line stroke="#26302C" stroke-dasharray="4,4" stroke-width="1" x1="0" x2="1000" y1="80" y2="80"></line>
+            <line stroke="#26302C" stroke-dasharray="4,4" stroke-width="1" x1="0" x2="1000" y1="120" y2="120"></line>
+            <line stroke="#26302C" stroke-dasharray="4,4" stroke-width="1" x1="0" x2="1000" y1="160" y2="160"></line>
+
+            <!-- Baseline Expected Band -->
+            <rect x="0" y="55" width="1000" height="75" fill="rgba(74,222,148,0.06)" />
+
+            <!-- Fill Gradient -->
+            <defs>
+              <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#4ADE94" stop-opacity="0.25"></stop>
+                <stop offset="100%" stop-color="#4ADE94" stop-opacity="0.0"></stop>
+              </linearGradient>
+            </defs>
+
+            <!-- Data Line Polygon -->
+            <polygon id="chart-polygon" fill="url(#chartGradient)" points="0,200 0,160 100,150 200,140 300,165 400,130 500,120 600,145 700,90 800,105 900,75 1000,65 1000,200"></polygon>
+            <polyline id="chart-polyline" fill="none" points="0,160 100,150 200,140 300,165 400,130 500,120 600,145 700,90 800,105 900,75 1000,65" stroke="#4ADE94" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></polyline>
+
+            <!-- Anomaly Point Circle -->
+            <circle class="animate-ping" cx="700" cy="90" fill="none" r="9" stroke="#F5B942" stroke-width="2"></circle>
+            <circle cx="700" cy="90" fill="#121514" r="6" stroke="#F5B942" stroke-width="3" style="cursor:pointer;" onclick="toggleAnomalyInfo()"></circle>
+          </svg>
+        </div>
+
+        <!-- Anomaly Callout Tooltip -->
+        <div id="anomaly-tooltip" class="absolute right-[22%] top-[25%] bg-dashboard-raised border border-dashboard-accent-warn/60 rounded-lg p-3 shadow-xl z-20 w-52 text-xs">
+          <div class="font-mono text-[10px] text-dashboard-accent-warn mb-1 flex items-center gap-1 font-bold">
+            <span class="material-symbols-outlined text-[14px]">warning</span>
+            ANOMALY DETECTED
+          </div>
+          <p class="text-dashboard-text-primary text-[11px] leading-tight">Aug 28: 40% response latency increase during Face Recall session.</p>
+        </div>
+
+        <!-- X Axis Labels -->
+        <div class="absolute bottom-[-24px] left-4 right-0 flex justify-between text-dashboard-text-secondary font-mono text-[10px] px-2">
+          <span>Aug 01</span>
+          <span>Aug 10</span>
+          <span>Aug 20</span>
+          <span>Aug 28 (Alert)</span>
+          <span>Today (Sep 4)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROW 3: PER-GAME PERFORMANCE CARDS GRID -->
+  <section class="space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <span class="font-mono text-[10px] text-dashboard-accent-primary uppercase tracking-wider bg-dashboard-accent-primary/10 px-2 py-0.5 rounded border border-dashboard-accent-primary/20">
+          GAMES / 02
+        </span>
+        <h3 class="text-lg font-bold text-dashboard-text-primary mt-1">Multi-Domain Exercise Battery</h3>
+      </div>
+      <span class="text-xs text-dashboard-text-secondary font-mono">5 ACTIVE EXERCISES</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="game-cards-grid">
+      <!-- Card 1: Memory Match -->
+      <div class="bg-dashboard-surface rounded-xl border border-dashboard-border p-5 hover:border-dashboard-accent-primary/40 transition-all flex flex-col justify-between group game-card" data-domain="memory">
+        <div>
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-dashboard-accent-primary/10 border border-dashboard-accent-primary/30 flex items-center justify-center text-dashboard-accent-primary">
+                <span class="material-symbols-outlined text-[24px]">psychology</span>
+              </div>
+              <div>
+                <h4 class="font-bold text-dashboard-text-primary text-base">Memory Match</h4>
+                <p class="text-[11px] text-dashboard-text-secondary">Visual & Spatial Memory</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-dashboard-accent-primary/15 text-dashboard-accent-primary border border-dashboard-accent-primary/30">MEDIUM</span>
+          </div>
+
+          <!-- Stats 3-Col -->
+          <div class="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-dashboard-raised border border-dashboard-border text-center">
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Accuracy</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">78%</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Response</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">4.2s</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Completion</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">91%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashboard-border flex items-center justify-between">
+          <span class="text-xs font-mono text-dashboard-accent-primary">Adaptive: ON</span>
+          <button onclick="parentLaunchGame('patient-view/04-game-session-memory-match.html')" class="text-xs font-semibold text-dashboard-text-primary group-hover:text-dashboard-accent-primary flex items-center gap-1 transition-colors cursor-pointer">
+            Play Session →
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 2: Family Faces -->
+      <div class="bg-dashboard-surface rounded-xl border border-dashboard-border p-5 hover:border-dashboard-accent-primary/40 transition-all flex flex-col justify-between group game-card" data-domain="faces">
+        <div>
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <span class="material-symbols-outlined text-[24px]">face</span>
+              </div>
+              <div>
+                <h4 class="font-bold text-dashboard-text-primary text-base">Face Recall</h4>
+                <p class="text-[11px] text-dashboard-text-secondary">Facial & Identity Recognition</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-dashboard-accent-primary/15 text-dashboard-accent-primary border border-dashboard-accent-primary/30">EASY</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-dashboard-raised border border-dashboard-border text-center">
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Accuracy</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">91%</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Response</div>
+              <div class="text-sm font-bold font-mono text-dashboard-accent-warn">6.1s</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Completion</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">100%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashboard-border flex items-center justify-between">
+          <span class="text-xs font-mono text-dashboard-accent-primary">Adaptive: ON</span>
+          <button onclick="parentLaunchGame('patient-view/04b-game-family-faces.html')" class="text-xs font-semibold text-dashboard-text-primary group-hover:text-dashboard-accent-primary flex items-center gap-1 transition-colors cursor-pointer">
+            Play Session →
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 3: Sequence Memory -->
+      <div class="bg-dashboard-surface rounded-xl border border-dashboard-border p-5 hover:border-dashboard-accent-primary/40 transition-all flex flex-col justify-between group game-card" data-domain="sequence">
+        <div>
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                <span class="material-symbols-outlined text-[24px]">pin</span>
+              </div>
+              <div>
+                <h4 class="font-bold text-dashboard-text-primary text-base">Sequence Memory</h4>
+                <p class="text-[11px] text-dashboard-text-secondary">Short-Term Working Memory</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-dashboard-accent-warn/15 text-dashboard-accent-warn border border-dashboard-accent-warn/30">HARD</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-dashboard-raised border border-dashboard-border text-center">
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Accuracy</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">64%</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Response</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">3.8s</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Completion</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">72%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashboard-border flex items-center justify-between">
+          <span class="text-xs font-mono text-dashboard-accent-primary">Adaptive: ON</span>
+          <button onclick="parentLaunchGame('patient-view/04c-game-sequence.html')" class="text-xs font-semibold text-dashboard-text-primary group-hover:text-dashboard-accent-primary flex items-center gap-1 transition-colors cursor-pointer">
+            Play Session →
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 4: Pattern Clock -->
+      <div class="bg-dashboard-surface rounded-xl border border-dashboard-border p-5 hover:border-dashboard-accent-primary/40 transition-all flex flex-col justify-between group game-card" data-domain="clock">
+        <div>
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <span class="material-symbols-outlined text-[24px]">schedule</span>
+              </div>
+              <div>
+                <h4 class="font-bold text-dashboard-text-primary text-base">Pattern Clock</h4>
+                <p class="text-[11px] text-dashboard-text-secondary">Visuoperceptual & Executive</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-dashboard-accent-primary/15 text-dashboard-accent-primary border border-dashboard-accent-primary/30">EASY</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-dashboard-raised border border-dashboard-border text-center">
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Accuracy</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">88%</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Response</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">5.2s</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Completion</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">95%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashboard-border flex items-center justify-between">
+          <span class="text-xs font-mono text-dashboard-accent-primary">Adaptive: ON</span>
+          <button onclick="parentLaunchGame('patient-view/04d-game-pattern-clock.html')" class="text-xs font-semibold text-dashboard-text-primary group-hover:text-dashboard-accent-primary flex items-center gap-1 transition-colors cursor-pointer">
+            Play Session →
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 5: Nature Sort -->
+      <div class="bg-dashboard-surface rounded-xl border border-dashboard-border p-5 hover:border-dashboard-accent-primary/40 transition-all flex flex-col justify-between group game-card" data-domain="memory">
+        <div>
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <span class="material-symbols-outlined text-[24px]">spa</span>
+              </div>
+              <div>
+                <h4 class="font-bold text-dashboard-text-primary text-base">Nature Sort</h4>
+                <p class="text-[11px] text-dashboard-text-secondary">Categorization & Attention</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-dashboard-accent-primary/15 text-dashboard-accent-primary border border-dashboard-accent-primary/30">MEDIUM</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-dashboard-raised border border-dashboard-border text-center">
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Accuracy</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">73%</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Response</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">4.9s</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Completion</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">83%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashboard-border flex items-center justify-between">
+          <span class="text-xs font-mono text-dashboard-accent-primary">Adaptive: ON</span>
+          <button onclick="parentLaunchGame('patient-view/03-cognitive-games-hub.html')" class="text-xs font-semibold text-dashboard-text-primary group-hover:text-dashboard-accent-primary flex items-center gap-1 transition-colors cursor-pointer">
+            Explore Hub →
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 6: Color & Pattern Recall -->
+      <div class="bg-dashboard-surface rounded-xl border border-dashboard-border p-5 hover:border-dashboard-accent-primary/40 transition-all flex flex-col justify-between group game-card" data-domain="color">
+        <div>
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
+                <span class="material-symbols-outlined text-[24px]">palette</span>
+              </div>
+              <div>
+                <h4 class="font-bold text-dashboard-text-primary text-base">Color & Pattern</h4>
+                <p class="text-[11px] text-dashboard-text-secondary">Spatial & Sequence Memory</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-dashboard-accent-primary/15 text-dashboard-accent-primary border border-dashboard-accent-primary/30">MEDIUM</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-dashboard-raised border border-dashboard-border text-center">
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Accuracy</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">89%</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Response</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">3.9s</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Completion</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">96%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashboard-border flex items-center justify-between">
+          <span class="text-xs font-mono text-dashboard-accent-primary">Adaptive: ON</span>
+          <button onclick="parentLaunchGame('patient-view/04e-game-color-pattern.html')" class="text-xs font-semibold text-dashboard-text-primary group-hover:text-dashboard-accent-primary flex items-center gap-1 transition-colors cursor-pointer">
+            Play Session →
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 7: Story Recall -->
+      <div class="bg-dashboard-surface rounded-xl border border-dashboard-border p-5 hover:border-dashboard-accent-primary/40 transition-all flex flex-col justify-between group game-card" data-domain="story">
+        <div>
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <span class="material-symbols-outlined text-[24px]">auto_stories</span>
+              </div>
+              <div>
+                <h4 class="font-bold text-dashboard-text-primary text-base">Story Recall</h4>
+                <p class="text-[11px] text-dashboard-text-secondary">Auditory Attention & Narrative</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-dashboard-accent-primary/15 text-dashboard-accent-primary border border-dashboard-accent-primary/30">GENTLE</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-dashboard-raised border border-dashboard-border text-center">
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Accuracy</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">95%</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Response</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">5.8s</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Completion</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">100%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashboard-border flex items-center justify-between">
+          <span class="text-xs font-mono text-dashboard-accent-primary">Adaptive: ON</span>
+          <button onclick="parentLaunchGame('patient-view/04f-game-story-recall.html')" class="text-xs font-semibold text-dashboard-text-primary group-hover:text-dashboard-accent-primary flex items-center gap-1 transition-colors cursor-pointer">
+            Play Session →
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 8: Daily Objects Recall -->
+      <div class="bg-dashboard-surface rounded-xl border border-dashboard-border p-5 hover:border-dashboard-accent-primary/40 transition-all flex flex-col justify-between group game-card" data-domain="objects">
+        <div>
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <span class="material-symbols-outlined text-[24px]">visibility</span>
+              </div>
+              <div>
+                <h4 class="font-bold text-dashboard-text-primary text-base">Daily Objects</h4>
+                <p class="text-[11px] text-dashboard-text-secondary">Short-Term Visual Retention</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-dashboard-accent-primary/15 text-dashboard-accent-primary border border-dashboard-accent-primary/30">RELAXED</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-dashboard-raised border border-dashboard-border text-center">
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Accuracy</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">93%</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Response</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">4.4s</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-mono text-dashboard-text-secondary uppercase">Completion</div>
+              <div class="text-sm font-bold font-mono text-dashboard-text-primary">98%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashboard-border flex items-center justify-between">
+          <span class="text-xs font-mono text-dashboard-accent-primary">Adaptive: ON</span>
+          <button onclick="parentLaunchGame('patient-view/04g-game-daily-objects.html')" class="text-xs font-semibold text-dashboard-text-primary group-hover:text-dashboard-accent-primary flex items-center gap-1 transition-colors cursor-pointer">
+            Play Session →
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 9: Unlock New Game Card -->
+      <div onclick="unlockNewExercise()" class="bg-dashboard-surface rounded-xl border-2 border-dashed border-dashboard-border p-6 flex flex-col items-center justify-center text-center gap-3 hover:border-dashboard-accent-primary hover:bg-dashboard-raised transition-all cursor-pointer min-h-[220px] group">
+        <div class="w-12 h-12 rounded-full bg-dashboard-raised group-hover:bg-dashboard-accent-primary/10 text-dashboard-text-secondary group-hover:text-dashboard-accent-primary flex items-center justify-center transition-colors">
+          <span class="material-symbols-outlined text-[28px]">add</span>
+        </div>
+        <div>
+          <h4 class="text-sm font-bold text-dashboard-text-primary group-hover:text-dashboard-accent-primary transition-colors">+ Unlock New Exercise</h4>
+          <p class="text-xs text-dashboard-text-secondary mt-0.5">Custom domain exercise prescribed by doctor</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROW 4: RECENT GAME SESSIONS (LIVE DATA) -->
+  <section class="bg-dashboard-surface rounded-xl border border-dashboard-border overflow-hidden shadow-lg">
+    <div class="bg-dashboard-raised border-b border-dashboard-border px-5 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-dashboard-accent-primary text-[18px]">history</span>
+        <h3 class="font-bold text-dashboard-text-primary text-sm">Recent Session History</h3>
+        <span class="text-xs text-dashboard-text-secondary font-mono" id="session-count-badge">(0 recorded)</span>
+      </div>
+      <button onclick="clearSessionHistory()" class="text-[11px] font-mono text-dashboard-text-secondary hover:text-dashboard-accent-danger transition-colors cursor-pointer">
+        Clear History
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs font-mono">
+        <thead class="bg-dashboard-canvas text-dashboard-text-secondary border-b border-dashboard-border uppercase text-[10px]">
+          <tr>
+            <th class="py-2.5 px-4">Game</th>
+            <th class="py-2.5 px-4">Date / Time</th>
+            <th class="py-2.5 px-4">Accuracy</th>
+            <th class="py-2.5 px-4">Duration</th>
+            <th class="py-2.5 px-4">CAS Score</th>
+          </tr>
+        </thead>
+        <tbody id="session-history-tbody" class="divide-y divide-dashboard-border text-dashboard-text-primary">
+          <tr>
+            <td colspan="5" class="py-6 text-center text-dashboard-text-secondary font-sans text-xs">
+              No game sessions recorded yet. Play a game in the Patient View to see live data here!
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="../shared/sound.js"></script>
+
+<script>
+  function syncPatientName() {
+    const pName = localStorage.getItem('careloop_patient_name') || 'Kamala Sharma';
+    const display = document.getElementById('patient-name-display');
+    if (display) display.textContent = pName;
+  }
+
+  function parentNavigate(screen, title, modeLabel) {
+    if (window.careLoopSound) window.careLoopSound.playClick();
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'navigate',
+        section: 'dashboard',
+        screen: screen,
+        title: title,
+        modeLabel: modeLabel
+      }, '*');
+    } else {
+      window.location.href = screen;
+    }
+  }
+
+  function parentLaunchGame(gameFile) {
+    if (window.careLoopSound) window.careLoopSound.playPop();
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'navigate',
+        section: 'patient',
+        screen: gameFile,
+        title: 'Game Session'
+      }, '*');
+    } else {
+      window.location.href = '../' + gameFile;
+    }
+  }
+
+  function filterGameDomain(domain, btn) {
+    if (window.careLoopSound) window.careLoopSound.playClick();
+    document.querySelectorAll('.filter-chip').forEach(c => {
+      c.className = "px-3 py-1 rounded-full bg-dashboard-raised border border-dashboard-border text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary transition-all cursor-pointer filter-chip";
+    });
+    btn.className = "px-3 py-1 rounded-full bg-dashboard-accent-primary/15 border border-dashboard-accent-primary/40 text-dashboard-accent-primary text-xs font-semibold transition-all cursor-pointer filter-chip active";
+
+    const cards = document.querySelectorAll('.game-card');
+    cards.forEach(card => {
+      if (domain === 'all' || card.getAttribute('data-domain') === domain) {
+        card.style.display = 'flex';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    const title = document.getElementById('chart-domain-title');
+    const score = document.getElementById('cas-score-display');
+    if (domain === 'memory') {
+      title.textContent = 'Memory Domain Performance Trend';
+      score.innerHTML = '78<span class="text-lg text-dashboard-text-secondary">/100</span>';
+    } else if (domain === 'faces') {
+      title.textContent = 'Face Recall Domain Performance Trend';
+      score.innerHTML = '91<span class="text-lg text-dashboard-text-secondary">/100</span>';
+    } else if (domain === 'sequence') {
+      title.textContent = 'Working Memory (Sequence) Trend';
+      score.innerHTML = '64<span class="text-lg text-dashboard-text-secondary">/100</span>';
+    } else if (domain === 'clock') {
+      title.textContent = 'Visuoperceptual Clock Domain Trend';
+      score.innerHTML = '88<span class="text-lg text-dashboard-text-secondary">/100</span>';
+    } else if (domain === 'color') {
+      title.textContent = 'Spatial & Sequence Memory (Color Pattern) Trend';
+      score.innerHTML = '89<span class="text-lg text-dashboard-text-secondary">/100</span>';
+    } else if (domain === 'story') {
+      title.textContent = 'Auditory Attention & Narrative Recall Trend';
+      score.innerHTML = '95<span class="text-lg text-dashboard-text-secondary">/100</span>';
+    } else if (domain === 'objects') {
+      title.textContent = 'Short-Term Visual Retention (Daily Objects) Trend';
+      score.innerHTML = '93<span class="text-lg text-dashboard-text-secondary">/100</span>';
+    } else {
+      title.textContent = 'Cognitive Activity Score (CAS) Trend';
+      score.innerHTML = '84<span class="text-lg text-dashboard-text-secondary">/100</span>';
+    }
+  }
+
+  function setDifficulty(mode) {
+    if (window.careLoopSound) window.careLoopSound.playClick();
+    const btnAd = document.getElementById('diff-adaptive');
+    const btnFx = document.getElementById('diff-fixed');
+    if (mode === 'adaptive') {
+      btnAd.className = "px-3 py-1 rounded bg-dashboard-surface text-dashboard-accent-primary text-xs font-semibold shadow-sm cursor-pointer transition-all";
+      btnFx.className = "px-3 py-1 rounded text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary cursor-pointer transition-all";
+    } else {
+      btnFx.className = "px-3 py-1 rounded bg-dashboard-surface text-dashboard-accent-primary text-xs font-semibold shadow-sm cursor-pointer transition-all";
+      btnAd.className = "px-3 py-1 rounded text-dashboard-text-secondary text-xs hover:text-dashboard-text-primary cursor-pointer transition-all";
+    }
+  }
+
+  function selectDateRange() {
+    const range = prompt("Select analysis window (e.g. '7 Days', '30 Days', '90 Days'):", "30 Days");
+    if (range) {
+      document.getElementById('date-range-label').textContent = `Custom (${range})`;
+    }
+  }
+
+  function toggleAnomalyInfo() {
+    const tip = document.getElementById('anomaly-tooltip');
+    if (tip) tip.classList.toggle('hidden');
+  }
+
+  function unlockNewExercise() {
+    alert("New exercise 'Word Recall & Spatial Loci' unlocked and scheduled for next session!");
+  }
+
+  function renderLiveAnalytics() {
+    if (!window.CareLoopGameState) return;
+    const history = window.CareLoopGameState.getHistory();
+    const countBadge = document.getElementById('session-count-badge');
+    const tbody = document.getElementById('session-history-tbody');
+    const casDisplay = document.getElementById('cas-score-display');
+
+    if (countBadge) {
+      countBadge.textContent = `(${history.length} recorded)`;
+    }
+
+    if (history.length > 0) {
+      const avgCas = window.CareLoopGameState.getAverageCAS();
+      if (casDisplay) {
+        casDisplay.innerHTML = `${avgCas}<span class="text-lg text-dashboard-text-secondary">/100</span>`;
+      }
+
+      // Render recent sessions table (latest first)
+      if (tbody) {
+        const recent = [...history].reverse().slice(0, 10);
+        tbody.innerHTML = recent.map(item => {
+          const dateStr = item.date ? new Date(item.date).toLocaleDateString(undefined, {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          }) : 'Recently';
+
+          const scoreColor = item.score >= 80 ? 'text-dashboard-accent-primary' : (item.score >= 60 ? 'text-dashboard-accent-warn' : 'text-dashboard-accent-danger');
+          const casColor = item.casScore >= 80 ? 'text-dashboard-accent-primary' : (item.casScore >= 60 ? 'text-dashboard-accent-warn' : 'text-dashboard-accent-danger');
+
+          return `
+            <tr class="hover:bg-dashboard-raised/50 transition-colors">
+              <td class="py-2.5 px-4 font-semibold text-dashboard-text-primary flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-dashboard-accent-primary"></span>
+                ${item.gameName || item.gameType}
+              </td>
+              <td class="py-2.5 px-4 text-dashboard-text-secondary">${dateStr}</td>
+              <td class="py-2.5 px-4 font-bold ${scoreColor}">${item.score}%</td>
+              <td class="py-2.5 px-4 text-dashboard-text-secondary">${item.durationSec}s</td>
+              <td class="py-2.5 px-4 font-bold ${casColor}">${item.casScore}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Dynamically update SVG Polyline and Polygon with recent CAS points
+      const polyline = document.getElementById('chart-polyline');
+      const polygon = document.getElementById('chart-polygon');
+      if (polyline && polygon && history.length >= 2) {
+        const points = history.slice(-10);
+        const step = 1000 / Math.max(1, points.length - 1);
+        const coords = points.map((p, idx) => {
+          const x = Math.round(idx * step);
+          // Y: 0 CAS is Y=200, 100 CAS is Y=40
+          const y = Math.round(200 - ((p.casScore || 50) / 100) * 160);
+          return `${x},${y}`;
+        });
+        polyline.setAttribute('points', coords.join(' '));
+        polygon.setAttribute('points', `0,200 ${coords.join(' ')} 1000,200`);
+      }
+    } else {
+      if (casDisplay) {
+        casDisplay.innerHTML = `84<span class="text-lg text-dashboard-text-secondary">/100</span>`;
+      }
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="py-6 text-center text-dashboard-text-secondary font-sans text-xs">
+              No game sessions recorded yet. Play a game in the Patient View to see live data here!
+            </td>
+          </tr>
+        `;
+      }
+    }
+  }
+
+  function clearSessionHistory() {
+    if (confirm("Are you sure you want to clear game session history?")) {
+      if (window.CareLoopGameState) {
+        window.CareLoopGameState.clear();
+      }
+      renderLiveAnalytics();
+    }
+  }
+
+  window.addEventListener('message', (e) => {
+    if (!e.data) return;
+    if (e.data.type === 'themeChange') {
+      if (e.data.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+      } else {
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.add('dark');
+      }
+    }
+    if (e.data.type === 'patientUpdated') {
+      syncPatientName();
+    }
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'careloop_patient_name') {
+      syncPatientName();
+    }
+    if (e.key === 'careloop_game_history') {
+      renderLiveAnalytics();
+    }
+  });
+
+  const savedTheme = localStorage.getItem('careloop_theme') || 'dark';
+  if (savedTheme === 'light') {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    syncPatientName();
+    renderLiveAnalytics();
+  });
+</script>
+</body></html>

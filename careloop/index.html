@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CareLoop — App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-canvas:        #0B111E;
+      --bg-surface:       #111A2E;
+      --bg-surface-raised:#18243E;
+      --border-subtle:    #243456;
+      --border-strong:    #364D7A;
+      --text-primary:     #F8FAFC;
+      --text-secondary:   #94A3B8;
+      --text-tertiary:    #64748B;
+      --accent:           #3B82F6;
+      --accent-hover:     #2563EB;
+      --warn:             #F5B942;
+      --danger:           #EF5A5A;
+      --info:             #60A5FA;
+      --mono:             #93C5FD;
+    }
+
+    html.light {
+      --bg-canvas:        #EFF6FF;
+      --bg-surface:       #FFFFFF;
+      --bg-surface-raised:#DBEAFE;
+      --border-subtle:    #BFDBFE;
+      --border-strong:    #93C5FD;
+      --text-primary:     #0F172A;
+      --text-secondary:   #475569;
+      --text-tertiary:    #64748B;
+      --accent:           #3B82F6;
+      --accent-hover:     #2563EB;
+      --warn:             #D97706;
+      --danger:           #EF4444;
+      --info:             #2563EB;
+      --mono:             #1D4ED8;
+    }
+
+    html, body { height: 100%; background: var(--bg-canvas); color: var(--text-primary); font-family: 'Inter', sans-serif; overflow: hidden; transition: background 200ms ease, color 200ms ease; }
+
+    /* ═══════════════════════════════════════
+       ROLE SWITCHER BAR
+     ═══════════════════════════════════════ */
+    #role-bar {
+      height: 44px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 9999;
+      transition: background 200ms ease, border-color 200ms ease;
+    }
+    #role-bar .brand {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 700; font-size: 15px; color: var(--text-primary);
+    }
+    #role-bar .brand .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+
+    .role-tabs { display: none !important; gap: 4px; }
+    .role-tab {
+      padding: 5px 14px; border-radius: 6px; font-size: 13px; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border-subtle);
+      color: var(--text-secondary); background: transparent;
+      transition: all 150ms;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .role-tab .material-symbols-outlined { font-size: 16px; }
+    .role-tab.active { background: var(--accent); color: #FFFFFF; border-color: var(--accent); }
+    .role-tab:hover:not(.active) { border-color: var(--border-strong); color: var(--text-primary); }
+
+    /* Theme Toggle & Language Controls */
+    .top-control-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface-raised);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    .top-control-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .top-control-btn .material-symbols-outlined { font-size: 18px; }
+
+    .lang-select-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .lang-select {
+      height: 30px;
+      padding: 0 24px 0 28px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface-raised);
+      color: var(--text-primary);
+      appearance: none;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .lang-select:focus { border-color: var(--accent); }
+    .lang-icon {
+      position: absolute; left: 8px; pointer-events: none;
+      font-size: 15px; color: var(--text-secondary);
+    }
+    .lang-arrow {
+      position: absolute; right: 6px; pointer-events: none;
+      font-size: 14px; color: var(--text-secondary);
+    }
+
+    /* ═══════════════════════════════════════
+       LAYOUT
+    ═══════════════════════════════════════ */
+    #app {
+      display: flex;
+      height: calc(100vh - 44px);
+      margin-top: 44px;
+    }
+
+    /* ═══════════════════════════════════════
+       SIDEBAR NAV
+    ═══════════════════════════════════════ */
+    #sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: var(--bg-canvas);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      transition: width 200ms ease;
+    }
+    #sidebar.collapsed { width: 52px; min-width: 52px; }
+
+    .nav-section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--mono);
+      text-transform: uppercase;
+      padding: 16px 14px 10px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    #sidebar.collapsed .nav-section-label { opacity: 0; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      margin: 3px 6px;
+      transition: background 150ms, color 150ms;
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      position: relative;
+    }
+    .nav-item:hover { background: var(--bg-surface-raised); color: var(--text-primary); }
+    .nav-item.active {
+      background: rgba(74,222,148,0.1);
+      color: var(--accent);
+    }
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 8px; bottom: 8px;
+      width: 3px;
+      background: var(--accent);
+      border-radius: 0 2px 2px 0;
+    }
+    .nav-item .icon { font-size: 18px; min-width: 20px; text-align: center; }
+    .nav-item .label { overflow: hidden; text-overflow: ellipsis; }
+    #sidebar.collapsed .nav-item .label { opacity: 0; width: 0; }
+    .badge {
+      margin-left: auto;
+      background: var(--danger);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 1px 6px;
+      min-width: 18px;
+      text-align: center;
+    }
+    #sidebar.collapsed .badge { display: none; }
+    #sidebar.collapsed #sidebar-patient-card .sidebar-patient-info { display: none; }
+    #sidebar.collapsed #sidebar-patient-card { padding: 8px 4px; justify-content: center; }
+
+    .sidebar-toggle {
+      margin: 8px 6px;
+      padding: 8px 14px;
+      cursor: pointer;
+      color: var(--text-tertiary);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 8px;
+      transition: color 150ms, background 150ms;
+    }
+    .sidebar-toggle:hover { color: var(--text-primary); background: var(--bg-surface-raised); }
+    .sidebar-toggle .icon { font-size: 18px; min-width: 20px; }
+
+    /* ═══════════════════════════════════════
+       MAIN CONTENT FRAME
+    ═══════════════════════════════════════ */
+    #main {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg-canvas);
+    }
+    #frame {
+      width: 100%; height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* ═══════════════════════════════════════
+       PATIENT VIEW — RESPONSIVE SMARTPHONE CHASSIS & NATIVE MOBILE APP
+    ═══════════════════════════════════════ */
+    #patient-shell {
+      display: none;
+      width: 100%;
+      height: 100%;
+      background-color: transparent;
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 0;
+      overflow-y: auto;
+      position: relative;
+    }
+    #patient-shell.active { display: flex; }
+
+    #mobile-wrapper {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      max-height: none;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      position: relative;
+      background: linear-gradient(to bottom, #eff6ff, #dbeafe);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Desktop Chassis Mode (>= 768px / md:) */
+    @media (min-width: 768px) {
+      #patient-shell {
+        background-color: #0f172a; /* bg-slate-900 */
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+      }
+      #mobile-wrapper {
+        width: 412px;
+        height: 860px;
+        max-height: 94vh;
+        border-radius: 40px;
+        border: 10px solid #020617; /* border-slate-950 */
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    /* Full-Screen Native Mobile Mode (< 768px) */
+    @media (max-width: 767px) {
+      #role-bar {
+        display: none !important;
+      }
+      #app {
+        height: 100vh !important;
+        height: 100dvh !important;
+        margin-top: 0 !important;
+      }
+      .phone-dynamic-island,
+      .phone-status-bar,
+      .phone-home-indicator {
+        display: none !important;
+      }
+    }
+
+    /* Sleek Top Notch / Dynamic Island Pill */
+    .phone-dynamic-island {
+      width: 112px; /* w-28 */
+      height: 16px; /* h-4 */
+      background-color: #020617; /* bg-slate-950 */
+      border-radius: 9999px;
+      margin: 8px auto 0;
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 8px;
+    }
+    .phone-dynamic-island::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #1e293b;
+    }
+
+    /* Pinned Top Status Bar */
+    .phone-status-bar {
+      height: 36px;
+      width: 100%;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: #1e293b;
+      user-select: none;
+      z-index: 45;
+      background: rgba(255, 255, 255, 0.90);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+      padding-top: 6px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    }
+    .phone-status-bar .status-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #334155;
+    }
+
+    /* Scrollable Frame Area */
+    .phone-screen-content {
+      flex: 1;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #mobile-frame {
+      width: 100%;
+      height: 100%;
+      flex: 1;
+      border: none;
+      display: block;
+    }
+
+    /* Bottom Navigation Bar */
+    #patient-nav-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      background: rgba(255, 255, 255, 0.90);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(226, 232, 240, 0.8); /* border-slate-200 */
+      height: 64px;
+      display: flex;
+      align-items: stretch;
+      padding-bottom: 10px;
+    }
+    .phone-home-indicator {
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 128px;
+      height: 4px;
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+      pointer-events: none;
+      z-index: 50;
+    }
+    .patient-nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: #94a3b8; /* text-slate-400 */
+      font-family: 'Inter', sans-serif;
+      font-size: 10.5px;
+      font-weight: 500;
+      transition: color 150ms, background 150ms;
+      border-radius: 0;
+    }
+    .patient-nav-btn.active { color: #2563eb; background: rgba(37, 99, 235, 0.08); font-weight: 700; } /* text-blue-600 */
+    .patient-nav-btn:hover { color: #2563eb; }
+    .patient-nav-btn .ico {
+      font-size: 20px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .patient-nav-btn .material-symbols-outlined {
+      font-size: 21px;
+    }
+
+    /* ═══════════════════════════════════════
+       LOADING OVERLAY
+    ═══════════════════════════════════════ */
+    #loader {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-canvas);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+      transition: opacity 200ms;
+    }
+    #loader.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border-subtle);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { font-size: 13px; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; }
+
+    
+
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+
+    /* Scrollbar */
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 4px; }
+  </style>
+  <!-- Tailwind CSS for utility breakpoints -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <!-- INITIAL SPLASH / LOADING SCREEN (2s) -->
+  <div id="splash-screen" class="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-blue-100 transition-opacity duration-300">
+    <div class="text-center">
+      <div class="w-16 h-16 rounded-3xl bg-blue-500 text-white flex items-center justify-center shadow-lg mx-auto mb-4 animate-pulse">
+        <span class="material-symbols-outlined text-4xl">spa</span>
+      </div>
+      <h1 class="text-blue-900 text-4xl font-bold tracking-tight">CareLoop</h1>
+      <p class="text-blue-600/80 text-sm mt-1.5 font-medium">Cognitive Care Companion</p>
+      <div class="mt-8 flex items-center justify-center gap-2">
+        <div class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce" style="animation-delay: 0ms"></div>
+        <div class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce" style="animation-delay: 150ms"></div>
+        <div class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce" style="animation-delay: 300ms"></div>
+      </div>
+    </div>
+  </div>
+
+
+<!-- ═══ ROLE BAR ═══ -->
+<div id="role-bar" class="hidden md:flex">
+  <div class="brand">
+    <div class="dot"></div>
+    CareLoop
+  </div>
+  <div class="role-tabs" style="display:none !important;">
+    <button class="role-tab" onclick="setRole('caregiver')" id="tab-caregiver">
+      <span class="material-symbols-outlined">clinical_notes</span>
+      <span>Caregiver Dashboard</span>
+    </button>
+    <button class="role-tab" onclick="setRole('patient')" id="tab-patient">
+      <span class="material-symbols-outlined">person</span>
+      <span>Patient View</span>
+    </button>
+  </div>
+  <div class="flex items-center gap-2.5" style="display:flex; align-items:center; gap:8px;">
+    <!-- 22 Languages of India Selector -->
+    <div class="lang-select-wrap" title="Change Application Language">
+      <span class="material-symbols-outlined lang-icon">translate</span>
+      <select id="global-lang-select" class="lang-select" onchange="changeGlobalLanguage(this.value)">
+        <option value="en">English</option>
+        <option value="hi">हिन्दी (Hindi)</option>
+        <option value="bn">বাংলা (Bengali)</option>
+        <option value="te">తెలుగు (Telugu)</option>
+        <option value="mr">मराठी (Marathi)</option>
+        <option value="ta">தமிழ் (Tamil)</option>
+        <option value="gu">ગુજરાતી (Gujarati)</option>
+        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+        <option value="ml">മലയാളം (Malayalam)</option>
+        <option value="or">ଓଡ଼ିଆ (Odia)</option>
+        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+        <option value="as">অসমীয়া (Assamese)</option>
+        <option value="ur">اردو (Urdu)</option>
+        <option value="sa">संस्कृतम् (Sanskrit)</option>
+        <option value="kok">कोंकणी (Konkani)</option>
+        <option value="ne">नेपाली (Nepali)</option>
+        <option value="sat">ᱥᱟᱱᱛᱟᱲᱤ (Santali)</option>
+        <option value="ks">کٲشُر (Kashmiri)</option>
+        <option value="sd">سنڌي (Sindhi)</option>
+        <option value="brx">बड़ो (Bodo)</option>
+        <option value="doi">डोगरी (Dogri)</option>
+        <option value="mai">मैथिली (Maithili)</option>
+        <option value="mni">মৈতৈলোন্ (Manipuri)</option>
+      </select>
+      <span class="material-symbols-outlined lang-arrow">expand_more</span>
+    </div>
+
+    <!-- Dark / Light Theme Toggle -->
+    <button class="top-control-btn" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Dark/Light Mode">
+      <span class="material-symbols-outlined" id="theme-icon">light_mode</span>
+    </button>
+
+    <!-- Circular Profile / Avatar Button in Top-Right Corner -->
+    <div style="position:relative; display:inline-flex; align-items:center;">
+      <button id="top-profile-btn" onclick="openLoginModal()" title="Demo Profile / Switch Account" style="position:relative; width:34px; height:34px; border-radius:50%; border:1.5px solid var(--border-subtle); background:var(--bg-surface-raised); color:var(--text-primary); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 150ms ease; padding:0;">
+        <span id="top-profile-icon" class="material-symbols-outlined" style="font-size:19px;">person</span>
+        <span id="top-profile-initials" style="display:none; font-size:13px; font-weight:700; color:var(--accent); font-family:'Inter',sans-serif;">R</span>
+        <!-- Active Green Dot Indicator -->
+        <span id="top-profile-dot" style="display:none; position:absolute; bottom:-1px; right:-1px; width:9px; height:9px; border-radius:50%; background:#4ADE94; border:2px solid var(--bg-canvas);"></span>
+      </button>
+    </div>
+
+    <span id="api-status-badge" style="font-size:11px; font-family:'JetBrains Mono',monospace; padding:3px 9px; border-radius:12px; background:rgba(74,222,148,0.12); color:var(--accent); border:1px solid rgba(74,222,148,0.3); display:inline-flex; align-items:center; gap:5px;">
+      <span style="width:6px; height:6px; border-radius:50%; background:var(--accent); display:inline-block;"></span>
+      API LIVE (PORT 4000)
+    </span>
+    <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-tertiary)">
+      AWS-SHIELDED
+    </span>
+  </div>
+</div>
+
+
+<!-- ═══ PROTOTYPE DEMO AUTH MODAL (Non-blocking popup) ═══ -->
+<div id="auth-overlay" onclick="handleAuthBackdropClick(event)" style="position:fixed; inset:0; z-index:99999; background:rgba(11,13,12,0.85); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; padding:16px;">
+  <div style="width:100%; max-width:440px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:20px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); color:var(--text-primary); font-family:'Inter',sans-serif;">
+    
+    <!-- Top Brand Header & Stepper with Close Button -->
+    <div style="padding:14px 20px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:32px; height:32px; border-radius:8px; background:rgba(74,222,148,0.15); border:1px solid rgba(74,222,148,0.3); display:flex; align-items:center; justify-content:center; color:var(--accent);">
+          <span class="material-symbols-outlined" style="font-size:18px;">spa</span>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:14px; display:flex; align-items:center; gap:6px;">
+            MindCare
+            <span style="width:6px; height:6px; border-radius:50%; background:var(--accent); display:inline-block; animation:pulse 2s infinite;"></span>
+          </div>
+          <div style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-secondary);">DEMO PROTOTYPE AUTH</div>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px;">
+        <!-- 3 Stepper Dots -->
+        <div style="display:flex; align-items:center; gap:5px;">
+          <div id="auth-dot-1" style="width:9px; height:9px; border-radius:50%; background:var(--accent); transition:all 200ms;"></div>
+          <div style="width:14px; height:2px; background:var(--border-subtle);"></div>
+          <div id="auth-dot-2" style="width:9px; height:9px; border-radius:50%; background:var(--border-subtle); transition:all 200ms;"></div>
+          <div style="width:14px; height:2px; background:var(--border-subtle);"></div>
+          <div id="auth-dot-3" style="width:9px; height:9px; border-radius:50%; background:var(--border-subtle); transition:all 200ms;"></div>
+        </div>
+
+        <!-- Close Modal Button -->
+        <button type="button" id="auth-close-btn" onclick="closeLoginModal()" title="Close demo modal" style="background:transparent; border:1px solid var(--border-subtle); color:var(--text-secondary); width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 150ms;">
+          <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Container for Steps -->
+    <div style="padding:22px 26px;">
+
+      <!-- STEP 1: DEMO SELECTION -->
+      <div id="auth-step-1" style="display:block;">
+        <h2 style="font-size:20px; font-weight:700; margin-bottom:4px; color:var(--text-primary);">Demo Account Login</h2>
+        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px; line-height:1.4;">Select a pre-configured persona to test the prototype without typing an email.</p>
+
+        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+          <!-- Demo Option 1: Caregiver (Rahul) -->
+          <button type="button" id="demo-card-caregiver" onclick="selectDemoAccount('caregiver')" style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:rgba(74,222,148,0.1); border:2px solid var(--accent); border-radius:12px; cursor:pointer; text-align:left; transition:all 150ms; outline:none;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:rgba(74,222,148,0.18); border:1px solid rgba(74,222,148,0.3); display:flex; align-items:center; justify-content:center; color:var(--accent);">
+                <span class="material-symbols-outlined" style="font-size:22px;">supervisor_account</span>
+              </div>
+              <div>
+                <div style="font-weight:700; font-size:14px; color:var(--text-primary);">Demo: Caregiver (Rahul)</div>
+                <div style="font-size:11.5px; color:var(--text-secondary); margin-top:2px;">Rahul Sharma · Age 45 · Caregiver Access</div>
+              </div>
+            </div>
+            <div id="demo-radio-caregiver" style="width:18px; height:18px; border-radius:50%; border:2px solid var(--accent); background:var(--accent); display:flex; align-items:center; justify-content:center;">
+              <div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>
+            </div>
+          </button>
+
+          <!-- Demo Option 2: Patient (Kamala) -->
+          <button type="button" id="demo-card-patient" onclick="selectDemoAccount('patient')" style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:var(--bg-surface-raised); border:1.5px solid var(--border-subtle); border-radius:12px; cursor:pointer; text-align:left; transition:all 150ms; outline:none;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:rgba(90,169,245,0.12); border:1px solid rgba(90,169,245,0.3); display:flex; align-items:center; justify-content:center; color:#5AA9F5;">
+                <span class="material-symbols-outlined" style="font-size:22px;">elderly</span>
+              </div>
+              <div>
+                <div style="font-weight:700; font-size:14px; color:var(--text-primary);">Demo: Patient (Kamala)</div>
+                <div style="font-size:11.5px; color:var(--text-secondary); margin-top:2px;">Kamala Sharma · Age 74 · Patient Companion</div>
+              </div>
+            </div>
+            <div id="demo-radio-patient" style="width:18px; height:18px; border-radius:50%; border:2px solid var(--border-subtle); background:transparent;"></div>
+          </button>
+        </div>
+
+        <button type="button" id="demo-next-btn" onclick="handleDemoStep1Next()" style="width:100%; height:52px; border-radius:12px; background:var(--accent); color:#0B0D0C; font-weight:700; font-size:15px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 150ms;">
+          <span>Next</span>
+          <span class="material-symbols-outlined" style="font-size:18px;">arrow_forward</span>
+        </button>
+      </div>
+
+      <!-- STEP 2: AUTO-FILLED OTP -->
+      <div id="auth-step-2" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <button type="button" onclick="goToAuthStep(1)" style="background:none; border:none; color:var(--accent); font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px; padding:0;">
+            <span class="material-symbols-outlined" style="font-size:15px;">arrow_back</span>
+            <span>Change demo account</span>
+          </button>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-tertiary);">STEP 2 / 3</span>
+        </div>
+
+        <h2 style="font-size:20px; font-weight:700; margin-bottom:4px; color:var(--text-primary);">Auto-Verifying Code</h2>
+        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px; line-height:1.4;">
+          Simulating instant OTP verification for <span id="auth-otp-account-label" style="font-weight:600; color:var(--text-primary);">Rahul (Caregiver)</span>.
+        </p>
+
+        <div style="margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; gap:6px; max-width:320px; margin:0 auto;">
+            <input type="text" class="auth-otp-box" readonly value="1" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
+            <input type="text" class="auth-otp-box" readonly value="2" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
+            <input type="text" class="auth-otp-box" readonly value="3" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
+            <input type="text" class="auth-otp-box" readonly value="4" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
+            <input type="text" class="auth-otp-box" readonly value="5" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
+            <input type="text" class="auth-otp-box" readonly value="6" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
+          </div>
+        </div>
+
+        <!-- Auto-verifying notification badge -->
+        <div style="padding:14px; border-radius:12px; background:rgba(74,222,148,0.08); border:1px solid rgba(74,222,148,0.25); display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px;">
+          <span class="spinner" style="width:18px; height:18px; border-width:2px; border-color:var(--accent); border-top-color:transparent; display:inline-block;"></span>
+          <span style="font-size:13px; font-weight:600; color:var(--accent);">Verifying automatically...</span>
+        </div>
+        <div style="text-align:center; font-size:11px; color:var(--text-tertiary); font-family:'JetBrains Mono',monospace;">
+          Auto-advancing in 1.5 seconds...
+        </div>
+      </div>
+
+      <!-- STEP 3: PROFILE ONBOARDING -->
+      <div id="auth-step-3" style="display:none;">
+        <h2 style="font-size:20px; font-weight:700; margin-bottom:4px; color:var(--text-primary);">Profile Onboarding</h2>
+        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px; line-height:1.4;">Pre-filled from your demo selection. Review and enter the application.</p>
+
+        <form onsubmit="handleAuthProfileSubmit(event)">
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">FULL NAME</label>
+            <input type="text" id="auth-fullname-input" value="Rahul" required style="width:100%; height:44px; padding:0 12px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13.5px; outline:none;" oninput="validateProfileForm()"/>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">AGE</label>
+            <input type="number" id="auth-age-input" min="1" max="120" value="45" required style="width:100%; height:44px; padding:0 12px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13.5px; outline:none;" oninput="validateProfileForm()"/>
+          </div>
+
+          <!-- Role Selector -->
+          <div style="margin-bottom:18px;">
+            <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:8px; font-weight:600;">ROLE</label>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div id="role-card-caregiver" onclick="selectAuthRole('caregiver')" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px; border:2px solid var(--accent); background:rgba(74,222,148,0.1); cursor:pointer;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="material-symbols-outlined" style="font-size:20px; color:var(--accent);">supervisor_account</span>
+                  <div>
+                    <div style="font-weight:700; font-size:13px; color:var(--text-primary);">Caregiver</div>
+                    <div style="font-size:11px; color:var(--text-secondary);">Setting up for a loved one</div>
+                  </div>
+                </div>
+                <div id="role-dot-caregiver" style="width:16px; height:16px; border-radius:50%; border:2px solid var(--accent); background:var(--accent); display:flex; align-items:center; justify-content:center;">
+                  <div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>
+                </div>
+              </div>
+
+              <div id="role-card-patient" onclick="selectAuthRole('patient')" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px; border:1px solid var(--border-subtle); background:var(--bg-surface-raised); cursor:pointer;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="material-symbols-outlined" style="font-size:20px; color:var(--text-secondary);">elderly</span>
+                  <div>
+                    <div style="font-weight:700; font-size:13px; color:var(--text-primary);">Patient</div>
+                    <div style="font-size:11px; color:var(--text-secondary);">Using this for myself</div>
+                  </div>
+                </div>
+                <div id="role-dot-patient" style="width:16px; height:16px; border-radius:50%; border:2px solid var(--border-subtle); background:transparent;"></div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" id="auth-complete-btn" style="width:100%; height:52px; border-radius:12px; background:var(--accent); color:#0B0D0C; font-weight:700; font-size:15px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 150ms;">
+            <span>Save &amp; Enter App</span>
+            <span class="material-symbols-outlined" style="font-size:18px;">login</span>
+          </button>
+        </form>
+      </div>
+      <!-- APP LANGUAGE / भाषा (NER Focused) -->
+      <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border-subtle);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <span style="font-size:11px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); font-weight:600; display:flex; align-items:center; gap:6px;">
+            <span class="material-symbols-outlined" style="font-size:15px; color:var(--accent);">translate</span>
+            App Language / भाषा
+          </span>
+          <span style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--accent); background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); padding:2px 8px; border-radius:12px; font-weight:600;">
+            NER FOCUS
+          </span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <button type="button" class="modal-lang-btn" data-lang="en" onclick="setGlobalLanguage('en')" style="padding:10px; border-radius:10px; font-size:12px; font-weight:700; border:1px solid var(--border-subtle); background:var(--bg-surface-raised); color:var(--text-primary); cursor:pointer; transition:all 150ms;">
+            English
+          </button>
+          <button type="button" class="modal-lang-btn" data-lang="hi" onclick="setGlobalLanguage('hi')" style="padding:10px; border-radius:10px; font-size:12px; font-weight:700; border:1px solid var(--border-subtle); background:var(--bg-surface-raised); color:var(--text-primary); cursor:pointer; transition:all 150ms;">
+            हिन्दी
+          </button>
+          <button type="button" class="modal-lang-btn" data-lang="as" onclick="setGlobalLanguage('as')" style="padding:10px; border-radius:10px; font-size:12px; font-weight:700; border:1px solid var(--border-subtle); background:var(--bg-surface-raised); color:var(--text-primary); cursor:pointer; transition:all 150ms;">
+            অসমীয়া (Assamese)
+          </button>
+          <button type="button" class="modal-lang-btn" data-lang="brx" onclick="setGlobalLanguage('brx')" style="padding:10px; border-radius:10px; font-size:12px; font-weight:700; border:1px solid var(--border-subtle); background:var(--bg-surface-raised); color:var(--text-primary); cursor:pointer; transition:all 150ms;">
+            बड़ो (Bodo)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app" class="h-screen md:h-[calc(100vh-44px)] md:mt-[44px]">
+
+  <!-- CAREGIVER SIDEBAR -->
+  <div id="sidebar">
+    <div class="nav-section-label">NAVIGATION</div>
+
+    <!-- Dashboard screens -->
+    <div class="nav-item active" onclick="navigate('dashboard','09-dashboard-overview.html','Overview','OVERVIEW / 09')" id="nav-09">
+      <span class="icon material-symbols-outlined">space_dashboard</span><span class="label">Overview</span>
+    </div>
+    <div class="nav-item" onclick="navigate('dashboard','10-medication-manager.html','Medication','MEDICATION / 10')" id="nav-10">
+      <span class="icon material-symbols-outlined">medication</span><span class="label">Medication</span>
+    </div>
+    <div class="nav-item" onclick="navigate('dashboard','11-cognitive-analytics.html','Games & Cognitive','COGNITIVE / 11')" id="nav-11">
+      <span class="icon material-symbols-outlined">psychology</span><span class="label">Games & Cognitive</span>
+    </div>
+    <div class="nav-item" onclick="navigate('dashboard','12-family-vault-management.html','Family Vault','VAULT / 12')" id="nav-12">
+      <span class="icon material-symbols-outlined">photo_library</span><span class="label">Family Vault</span>
+    </div>
+
+    <div style="flex:1"></div>
+
+    <!-- Active Patient Profile Badge -->
+    <div id="sidebar-patient-card" style="margin: 6px; padding: 10px 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; font-size: 11px; display: flex; align-items: center; gap: 8px;">
+      <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(74,222,148,0.15); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; border: 1px solid rgba(74,222,148,0.3); flex-shrink: 0;">
+        KS
+      </div>
+      <div style="overflow: hidden;" class="sidebar-patient-info">
+        <div style="font-weight: 600; color: var(--text-primary); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="sidebar-patient-name">Kamala Sharma</div>
+        <div style="color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; font-size: 10px;">#CL-8821 · Age 74</div>
+      </div>
+    </div>
+    <div class="sidebar-toggle" onclick="toggleSidebar()" title="Collapse sidebar">
+      <span class="icon material-symbols-outlined">first_page</span>
+      <span class="label" style="font-size:12px;font-family:'JetBrains Mono',monospace;">COLLAPSE</span>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="main">
+    <!-- Loading overlay -->
+    <div id="loader">
+      <div class="spinner"></div>
+      <div class="loader-text">LOADING SCREEN...</div>
+    </div>
+
+    <!-- Caregiver iframe -->
+    <iframe id="frame" title="CareLoop Screen"></iframe>
+
+    <!-- Patient View mobile shell (hidden by default) -->
+    <div id="patient-shell" class="w-full h-full p-0 bg-transparent md:bg-slate-900 md:p-6 flex items-stretch md:items-center justify-center">
+      <div id="mobile-wrapper" class="w-full h-screen md:w-[412px] md:h-[860px] md:max-h-[94vh] border-0 md:border-[10px] md:border-slate-950 rounded-none md:rounded-[40px] shadow-none md:shadow-2xl overflow-hidden flex flex-col relative">
+        <!-- Sleek Top Notch / Dynamic Island Pill -->
+        <div class="phone-dynamic-island hidden md:flex"></div>
+
+        <!-- Pinned Top Status Bar -->
+        <div class="phone-status-bar hidden md:flex">
+          <span id="phone-clock">9:41</span>
+          <div class="status-right">
+            <span class="material-symbols-outlined" style="font-size:14px;">signal_cellular_4_bar</span>
+            <span class="material-symbols-outlined" style="font-size:14px;">wifi</span>
+            <span class="material-symbols-outlined" style="font-size:15px;">battery_full</span>
+          </div>
+        </div>
+
+        <!-- Phone Screen Content (Hosts the Active Patient Screen) -->
+        <div class="phone-screen-content no-scrollbar overflow-y-auto overscroll-contain">
+          <iframe id="mobile-frame" title="CareLoop Patient Screen"></iframe>
+        </div>
+
+        <!-- Patient bottom nav (5 Clean, Essential Options) -->
+        <nav id="patient-nav-bar">
+          <button class="patient-nav-btn active" onclick="patientNav('01-patient-home.html','01')" id="pnav-01">
+            <span class="ico material-symbols-outlined">home</span>
+            <span id="pnav-text-home">Home</span>
+          </button>
+          <button class="patient-nav-btn" onclick="patientNav('03-cognitive-games-hub.html','03')" id="pnav-03">
+            <span class="ico material-symbols-outlined">sports_esports</span>
+            <span id="pnav-text-games">Games</span>
+          </button>
+          <button class="patient-nav-btn" onclick="patientNav('06-one-touch-family-calling.html','06')" id="pnav-06">
+            <span class="ico material-symbols-outlined">call</span>
+            <span id="pnav-text-family">Family</span>
+          </button>
+          <button class="patient-nav-btn" onclick="patientNav('02-medication-reminder.html','02')" id="pnav-02">
+            <span class="ico material-symbols-outlined">medication</span>
+            <span id="pnav-text-meds">Meds</span>
+          </button>
+          <button class="patient-nav-btn" onclick="patientNav('07-voice-assistant-overlay.html','07')" id="pnav-07">
+            <span class="ico material-symbols-outlined">mic</span>
+            <span id="pnav-text-voice">Voice AI</span>
+          </button>
+          <!-- Authentic Phone Home Indicator Bar -->
+          <div class="phone-home-indicator hidden md:block"></div>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="shared/voiceManager.js"></script>
+<script src="shared/sound.js"></script>
+<script src="shared/translations.js"></script>
+<script src="shared/api.js"></script>
+
+<script>
+  // ═══════════════════════════════════════
+  //  STATE
+  // ═══════════════════════════════════════
+  let currentRole = 'caregiver';
+  let currentNavId = 'nav-09';
+  let currentPatientId = 'pnav-01';
+  let sidebarCollapsed = false;
+
+  const DASHBOARD_PATH = 'dashboard/';
+  const PATIENT_PATH   = 'patient-view/';
+
+  // ═══════════════════════════════════════
+  //  THEME & LANGUAGE MANAGEMENT
+  // ═══════════════════════════════════════
+  let currentTheme = localStorage.getItem('careloop_theme') || 'dark';
+  let currentLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
+  let currentAppLanguage = currentLang;
+
+  function applyTheme(theme, broadcast = true) {
+    currentTheme = theme;
+    localStorage.setItem('careloop_theme', theme);
+    const htmlEl = document.documentElement;
+    const themeIcon = document.getElementById('theme-icon');
+    const themeBtn = document.getElementById('theme-toggle-btn');
+
+    if (theme === 'light') {
+      htmlEl.classList.add('light');
+      if (themeIcon) themeIcon.textContent = 'dark_mode';
+      if (themeBtn) themeBtn.title = 'Switch to Dark Mode';
+    } else {
+      htmlEl.classList.remove('light');
+      if (themeIcon) themeIcon.textContent = 'light_mode';
+      if (themeBtn) themeBtn.title = 'Switch to Light Mode';
+    }
+
+    if (broadcast) {
+      const frame = document.getElementById('frame');
+      const mobileFrame = document.getElementById('mobile-frame');
+      try {
+        if (frame && frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: 'themeChange', theme: currentTheme }, '*');
+        }
+        if (mobileFrame && mobileFrame.contentWindow) {
+          mobileFrame.contentWindow.postMessage({ type: 'themeChange', theme: currentTheme }, '*');
+        }
+      } catch (e) {}
+    }
+  }
+
+  function toggleTheme() {
+    const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+    applyTheme(nextTheme, true);
+    if (window.careLoopSound) window.careLoopSound.playClick();
+  }
+
+  async function changeGlobalLanguage(code) {
+    await setGlobalLanguage(code);
+  }
+
+  // ═══════════════════════════════════════
+  //  HACKATHON DEMO AUTHENTICATION (PROTOTYPE MODAL)
+  // ═══════════════════════════════════════
+  let isAppLoading = true;
+  let isAuthenticated = true; // Default to active authenticated session for hackathon demo
+  let isLoginModalOpen = false;
+  let selectedDemoRole = 'patient'; // 'caregiver' | 'patient'
+  let authSelectedRole = 'patient';
+  let autoOtpTimer = null;
+  let currentUser = {
+    name: 'Keshav Sharma',
+    age: 74,
+    role: 'patient',
+    initials: 'K'
+  };
+
+  function openLoginModal() {
+    isLoginModalOpen = true;
+    const overlay = document.getElementById('auth-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    const closeBtn = document.getElementById('auth-close-btn');
+    if (closeBtn) closeBtn.style.display = 'flex';
+    goToAuthStep(1);
+  }
+
+  function closeLoginModal() {
+    isLoginModalOpen = false;
+    if (autoOtpTimer) {
+      clearTimeout(autoOtpTimer);
+      autoOtpTimer = null;
+    }
+    const overlay = document.getElementById('auth-overlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function toggleLoginModal() {
+    if (isLoginModalOpen) closeLoginModal();
+    else openLoginModal();
+  }
+
+  function handleAuthBackdropClick(e) {
+    if (e.target && e.target.id === 'auth-overlay') {
+      closeLoginModal();
+    }
+  }
+
+  // STEP 1: DEMO ACCOUNT SELECTION
+  function selectDemoAccount(role) {
+    selectedDemoRole = role;
+    authSelectedRole = role;
+
+    const cardCaregiver = document.getElementById('demo-card-caregiver');
+    const cardPatient = document.getElementById('demo-card-patient');
+    const radioCaregiver = document.getElementById('demo-radio-caregiver');
+    const radioPatient = document.getElementById('demo-radio-patient');
+
+    if (role === 'caregiver') {
+      if (cardCaregiver) {
+        cardCaregiver.style.borderColor = 'var(--accent)';
+        cardCaregiver.style.background = 'rgba(74,222,148,0.1)';
+      }
+      if (cardPatient) {
+        cardPatient.style.borderColor = 'var(--border-subtle)';
+        cardPatient.style.background = 'var(--bg-surface-raised)';
+      }
+      if (radioCaregiver) {
+        radioCaregiver.style.borderColor = 'var(--accent)';
+        radioCaregiver.style.background = 'var(--accent)';
+        radioCaregiver.innerHTML = '<div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>';
+      }
+      if (radioPatient) {
+        radioPatient.style.borderColor = 'var(--border-subtle)';
+        radioPatient.style.background = 'transparent';
+        radioPatient.innerHTML = '';
+      }
+    } else {
+      if (cardPatient) {
+        cardPatient.style.borderColor = 'var(--accent)';
+        cardPatient.style.background = 'rgba(74,222,148,0.1)';
+      }
+      if (cardCaregiver) {
+        cardCaregiver.style.borderColor = 'var(--border-subtle)';
+        cardCaregiver.style.background = 'var(--bg-surface-raised)';
+      }
+      if (radioPatient) {
+        radioPatient.style.borderColor = 'var(--accent)';
+        radioPatient.style.background = 'var(--accent)';
+        radioPatient.innerHTML = '<div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>';
+      }
+      if (radioCaregiver) {
+        radioCaregiver.style.borderColor = 'var(--border-subtle)';
+        radioCaregiver.style.background = 'transparent';
+        radioCaregiver.innerHTML = '';
+      }
+    }
+  }
+
+  function handleDemoStep1Next() {
+    if (window.careLoopSound) window.careLoopSound.playPop();
+    goToAuthStep(2);
+  }
+
+  function goToAuthStep(step) {
+    const s1 = document.getElementById('auth-step-1');
+    const s2 = document.getElementById('auth-step-2');
+    const s3 = document.getElementById('auth-step-3');
+    if (s1) s1.style.display = step === 1 ? 'block' : 'none';
+    if (s2) s2.style.display = step === 2 ? 'block' : 'none';
+    if (s3) s3.style.display = step === 3 ? 'block' : 'none';
+
+    const d1 = document.getElementById('auth-dot-1');
+    const d2 = document.getElementById('auth-dot-2');
+    const d3 = document.getElementById('auth-dot-3');
+    if (d1) d1.style.background = step >= 1 ? 'var(--accent)' : 'var(--border-subtle)';
+    if (d2) d2.style.background = step >= 2 ? 'var(--accent)' : 'var(--border-subtle)';
+    if (d3) d3.style.background = step >= 3 ? 'var(--accent)' : 'var(--border-subtle)';
+
+    if (autoOtpTimer) {
+      clearTimeout(autoOtpTimer);
+      autoOtpTimer = null;
+    }
+
+    if (step === 2) {
+      // Step 2: Auto-filled OTP
+      const acctLabel = document.getElementById('auth-otp-account-label');
+      if (acctLabel) {
+        acctLabel.textContent = selectedDemoRole === 'caregiver' ? 'Rahul (Caregiver)' : 'Kamala (Patient)';
+      }
+
+      // Automatically transition to Step 3 after exactly 1.5 seconds with no manual click required
+      autoOtpTimer = setTimeout(() => {
+        if (isLoginModalOpen) {
+          goToAuthStep(3);
+        }
+      }, 1500);
+    } else if (step === 3) {
+      // Step 3: Profile Setup Pre-fill based on Step 1 selection
+      const nameInput = document.getElementById('auth-fullname-input');
+      const ageInput = document.getElementById('auth-age-input');
+
+      if (selectedDemoRole === 'caregiver') {
+        if (nameInput) nameInput.value = 'Rahul';
+        if (ageInput) ageInput.value = '45';
+        selectAuthRole('caregiver');
+      } else {
+        if (nameInput) nameInput.value = 'Kamala';
+        if (ageInput) ageInput.value = '74';
+        selectAuthRole('patient');
+      }
+      validateProfileForm();
+    }
+  }
+
+  function selectAuthRole(role) {
+    authSelectedRole = role;
+    const cardCaregiver = document.getElementById('role-card-caregiver');
+    const cardPatient = document.getElementById('role-card-patient');
+    const dotCaregiver = document.getElementById('role-dot-caregiver');
+    const dotPatient = document.getElementById('role-dot-patient');
+
+    if (role === 'caregiver') {
+      if (cardCaregiver) {
+        cardCaregiver.style.borderColor = 'var(--accent)';
+        cardCaregiver.style.background = 'rgba(74,222,148,0.1)';
+      }
+      if (cardPatient) {
+        cardPatient.style.borderColor = 'var(--border-subtle)';
+        cardPatient.style.background = 'var(--bg-surface-raised)';
+      }
+      if (dotCaregiver) {
+        dotCaregiver.style.borderColor = 'var(--accent)';
+        dotCaregiver.style.background = 'var(--accent)';
+        dotCaregiver.innerHTML = '<div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>';
+      }
+      if (dotPatient) {
+        dotPatient.style.borderColor = 'var(--border-subtle)';
+        dotPatient.style.background = 'transparent';
+        dotPatient.innerHTML = '';
+      }
+    } else {
+      if (cardPatient) {
+        cardPatient.style.borderColor = 'var(--accent)';
+        cardPatient.style.background = 'rgba(74,222,148,0.1)';
+      }
+      if (cardCaregiver) {
+        cardCaregiver.style.borderColor = 'var(--border-subtle)';
+        cardCaregiver.style.background = 'var(--bg-surface-raised)';
+      }
+      if (dotPatient) {
+        dotPatient.style.borderColor = 'var(--accent)';
+        dotPatient.style.background = 'var(--accent)';
+        dotPatient.innerHTML = '<div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>';
+      }
+      if (dotCaregiver) {
+        dotCaregiver.style.borderColor = 'var(--border-subtle)';
+        dotCaregiver.style.background = 'transparent';
+        dotCaregiver.innerHTML = '';
+      }
+    }
+  }
+
+  function validateProfileForm() {
+    const nameInput = document.getElementById('auth-fullname-input');
+    const ageInput = document.getElementById('auth-age-input');
+    const btn = document.getElementById('auth-complete-btn');
+
+    const name = nameInput ? nameInput.value.trim() : '';
+    const age = ageInput ? parseInt(ageInput.value, 10) : 0;
+    const isValid = name.length > 0 && age > 0;
+
+    if (btn) {
+      btn.disabled = !isValid;
+      btn.style.opacity = isValid ? '1' : '0.5';
+      btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+    }
+    return isValid;
+  }
+
+  function handleAuthProfileSubmit(e) {
+    if (e) e.preventDefault();
+    const nameInput = document.getElementById('auth-fullname-input');
+    const ageInput = document.getElementById('auth-age-input');
+    const name = nameInput && nameInput.value.trim() ? nameInput.value.trim() : (selectedDemoRole === 'caregiver' ? 'Rahul Sharma' : 'Keshav Sharma');
+    const age = ageInput && ageInput.value ? parseInt(ageInput.value, 10) : (selectedDemoRole === 'caregiver' ? 45 : 74);
+    const role = authSelectedRole || selectedDemoRole;
+    const initial = name.charAt(0).toUpperCase();
+
+    currentUser = {
+      name: name,
+      age: age,
+      role: role,
+      initials: initial
+    };
+
+    localStorage.setItem('careloop_authenticated', 'true');
+    localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
+    localStorage.setItem('careloop_patient_name', name);
+    localStorage.setItem('careloop_user_role', role);
+
+    if (window.careLoopSound) window.careLoopSound.playSuccess();
+    applyAuthenticatedProfile(currentUser);
+    closeLoginModal();
+
+    isAuthenticated = true;
+
+    // Broadcast update to child iframe frames
+    const frame = document.getElementById('frame');
+    const mobileFrame = document.getElementById('mobile-frame');
+    try {
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.postMessage({ type: 'patientUpdated', name: name, role: role }, '*');
+      }
+      if (mobileFrame && mobileFrame.contentWindow) {
+        mobileFrame.contentWindow.postMessage({ type: 'patientUpdated', name: name, role: role }, '*');
+      }
+    } catch(err) {}
+
+    // Stay on Patient Home Screen and update greeting
+    setRole('patient');
+    patientNav('01-patient-home.html', '01');
+  }
+
+  function applyAuthenticatedProfile(profile) {
+    if (!profile) return;
+    const initial = (profile.initials || profile.name.charAt(0)).toUpperCase();
+
+    // Update Top-Right Profile / Avatar Button
+    const iconEl = document.getElementById('top-profile-icon');
+    const initialsEl = document.getElementById('top-profile-initials');
+    const dotEl = document.getElementById('top-profile-dot');
+    const btn = document.getElementById('top-profile-btn');
+
+    if (iconEl) iconEl.style.display = 'none';
+    if (initialsEl) {
+      initialsEl.textContent = initial;
+      initialsEl.style.display = 'inline-block';
+    }
+    if (dotEl) dotEl.style.display = 'block';
+    if (btn) btn.title = `${profile.name} (${profile.role === 'caregiver' ? 'Caregiver' : 'Patient'}) — Click to switch account`;
+
+    if (profile.role === 'patient') {
+      updateSidebarPatientBadge(profile.name);
+    }
+  }
+
+  function signOutAuth() {
+    localStorage.removeItem('careloop_authenticated');
+    localStorage.removeItem('careloop_user_profile');
+    currentUser = null;
+
+    const iconEl = document.getElementById('top-profile-icon');
+    const initialsEl = document.getElementById('top-profile-initials');
+    const dotEl = document.getElementById('top-profile-dot');
+    const btn = document.getElementById('top-profile-btn');
+    if (iconEl) iconEl.style.display = 'inline-block';
+    if (initialsEl) initialsEl.style.display = 'none';
+    if (dotEl) dotEl.style.display = 'none';
+    if (btn) btn.title = 'Demo Profile / Switch Account';
+
+    openLoginModal();
+  }
+
+  // ═══════════════════════════════════════
+  //  INIT (DO NOT BLOCK APP ON INITIAL LOAD)
+  // ═══════════════════════════════════════
+  window.addEventListener('DOMContentLoaded', () => {
+    applyTheme(currentTheme, false);
+    const langSelect = document.getElementById('global-lang-select');
+    if (langSelect && currentLang) langSelect.value = currentLang;
+    changeGlobalLanguage(currentLang);
+
+    const savedPatient = localStorage.getItem('careloop_patient_name') || 'Kamala Sharma';
+    const patientNameEl = document.getElementById('sidebar-patient-name');
+    if (patientNameEl) patientNameEl.textContent = savedPatient;
+
+    function updatePhoneClock() {
+      const clockEl = document.getElementById('phone-clock');
+      if (!clockEl) return;
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      clockEl.textContent = `${hours}:${minutes}`;
+    }
+    updatePhoneClock();
+    setInterval(updatePhoneClock, 1000);
+
+    // Requirement 3 & 4: Always default to Patient View (Home Screen)
+    setRole('patient');
+    patientNav('01-patient-home.html', '01');
+
+    // 1. Initial splash screen timer: exactly 2 seconds
+    setTimeout(() => {
+      isAppLoading = false;
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        splash.style.opacity = '0';
+        splash.style.pointerEvents = 'none';
+        setTimeout(() => splash.remove(), 350);
+      }
+      // App loads directly into Patient View (Home Screen) with active default session
+    }, 2000);
+  });
+
+  // ═══════════════════════════════════════
+  //  ROLE SWITCHING
+  // ═══════════════════════════════════════
+  function setRole(role) {
+    // Immediately silence speech when toggling modes
+    if (window.VoiceManager) window.VoiceManager.stop();
+    else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    try {
+      const mf = document.getElementById('mobile-frame');
+      if (mf && mf.contentWindow && mf.contentWindow.speechSynthesis) {
+        mf.contentWindow.speechSynthesis.cancel();
+      }
+    } catch (_) {}
+
+    currentRole = role;
+    const sidebar     = document.getElementById('sidebar');
+    const frame       = document.getElementById('frame');
+    const patientShell= document.getElementById('patient-shell');
+    const tabCare     = document.getElementById('tab-caregiver');
+    const tabPatient  = document.getElementById('tab-patient');
+
+    if (role === 'caregiver') {
+      sidebar.style.display      = 'flex';
+      frame.style.display        = 'block';
+      patientShell.classList.remove('active');
+      tabCare.classList.add('active');
+      tabPatient.classList.remove('active');
+      // Reload current dashboard screen
+      const activeNav = document.querySelector('.nav-item.active');
+      if (!activeNav) navigate('dashboard','09-dashboard-overview.html','Overview','OVERVIEW / 09');
+    } else {
+      sidebar.style.display = 'none';
+      frame.style.display   = 'none';
+      patientShell.classList.add('active');
+      tabPatient.classList.add('active');
+      tabCare.classList.remove('active');
+      // Load patient home by default
+      patientNav('01-patient-home.html','01');
+    }
+  }
+
+  // ═══════════════════════════════════════
+  //  DASHBOARD NAVIGATION
+  // ═══════════════════════════════════════
+  function navigate(folder, file, label, badge) {
+    // Silence any speech when changing dashboard screen
+    if (window.VoiceManager) window.VoiceManager.stop();
+    else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    // Update active nav item
+    if (currentNavId) {
+      const prev = document.getElementById(currentNavId);
+      if (prev) prev.classList.remove('active');
+    }
+    const navId = 'nav-' + file.replace('.html','').replace('dashboard/','').replace(/\D/g,'').substring(0,3);
+
+    // Find by onclick match
+    document.querySelectorAll('.nav-item').forEach(el => {
+      if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(file)) {
+        el.classList.add('active');
+        currentNavId = el.id;
+      }
+    });
+
+    showLoader();
+    const frame = document.getElementById('frame');
+    frame.src = (folder === 'dashboard' ? DASHBOARD_PATH : PATIENT_PATH) + file;
+    frame.onload = () => {
+      hideLoader();
+      try {
+        if (frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: 'themeChange', theme: currentTheme }, '*');
+          const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || currentLang || 'en';
+          frame.contentWindow.postMessage({ type: 'languageChange', code: activeLang, appLanguage: activeLang }, '*');
+          frame.contentWindow.postMessage({ type: 'patientUpdated', name: localStorage.getItem('careloop_patient_name') || 'Kamala Sharma' }, '*');
+        }
+      } catch (e) {}
+    };
+
+    const ml = document.getElementById('mode-label'); if (ml) ml.textContent = badge || label;
+  }
+
+  // ═══════════════════════════════════════
+  //  PATIENT NAVIGATION
+  // ═══════════════════════════════════════
+  function patientNav(file, id) {
+    // CRITICAL AUDIO FIX: Silence ongoing speech before changing screens to prevent voice bleeding
+    if (window.VoiceManager) window.VoiceManager.stop();
+    else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    try {
+      const mf = document.getElementById('mobile-frame');
+      if (mf && mf.contentWindow && mf.contentWindow.speechSynthesis) {
+        mf.contentWindow.speechSynthesis.cancel();
+      }
+    } catch (_) {}
+
+    // Update active patient nav button
+    if (currentPatientId) {
+      const prev = document.getElementById('pnav-' + currentPatientId);
+      if (prev) prev.classList.remove('active');
+    }
+    const btn = document.getElementById('pnav-' + id);
+    if (btn) btn.classList.add('active');
+    currentPatientId = id;
+
+    showLoader();
+    const mf = document.getElementById('mobile-frame');
+    mf.src = PATIENT_PATH + file;
+    mf.onload = () => {
+      hideLoader();
+      try {
+        if (mf.contentWindow) {
+          mf.contentWindow.postMessage({ type: 'themeChange', theme: currentTheme }, '*');
+          const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || currentLang || 'en';
+          mf.contentWindow.postMessage({ type: 'languageChange', code: activeLang, appLanguage: activeLang }, '*');
+          mf.contentWindow.postMessage({ type: 'patientUpdated', name: localStorage.getItem('careloop_patient_name') || 'Kamala Sharma' }, '*');
+        }
+      } catch (e) {}
+    };
+
+    const labels = {
+      '01':'HOME / 01','02':'MEDICATION / 02','03':'GAMES / 03',
+      '04':'MEMORY MATCH / 04','faces':'FACES RECALL / 04B','04c':'SEQUENCE / 04C','04d':'CLOCK / 04D',
+      '04e':'COLOR PATTERN / 04E','04f':'STORY RECALL / 04F','04g':'DAILY OBJECTS / 04G',
+      '05':'FAMILY / 05','06':'CALLING / 06','07':'VOICE / 07'
+    };
+    const ml = document.getElementById('mode-label'); if (ml) ml.textContent = labels[id] || id;
+  }
+
+  // Live Backend Health Monitor
+  async function checkBackendHealth() {
+    const badge = document.getElementById('api-status-badge');
+    try {
+      const res = await fetch('http://localhost:4000/health');
+      if (res.ok) {
+        badge.innerHTML = '<span style="width:6px; height:6px; border-radius:50%; background:#4ADE94; display:inline-block;"></span> API LIVE (PORT 4000)';
+        badge.style.color = '#4ADE94';
+        badge.style.borderColor = 'rgba(74,222,148,0.3)';
+        badge.style.background = 'rgba(74,222,148,0.12)';
+      } else {
+        throw new Error('Not 200');
+      }
+    } catch(e) {
+      badge.innerHTML = '<span style="width:6px; height:6px; border-radius:50%; background:#F5B942; display:inline-block;"></span> CLIENT OFFLINE MODE';
+      badge.style.color = '#F5B942';
+      badge.style.borderColor = 'rgba(245,185,66,0.3)';
+      badge.style.background = 'rgba(245,185,66,0.12)';
+    }
+  }
+  checkBackendHealth();
+  setInterval(checkBackendHealth, 15000);
+
+  // ═══════════════════════════════════════
+  //  SIDEBAR TOGGLE
+  // ═══════════════════════════════════════
+  function toggleSidebar() {
+    sidebarCollapsed = !sidebarCollapsed;
+    document.getElementById('sidebar').classList.toggle('collapsed', sidebarCollapsed);
+  }
+
+  // ═══════════════════════════════════════
+  //  LOADER
+  // ═══════════════════════════════════════
+  function showLoader() {
+    document.getElementById('loader').classList.remove('hidden');
+  }
+  function hideLoader() {
+    setTimeout(() => document.getElementById('loader').classList.add('hidden'), 80);
+  }
+
+  // ═══════════════════════════════════════
+  //  KEYBOARD SHORTCUTS
+  // ═══════════════════════════════════════
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && isLoginModalOpen && (!isGatekeeperMode || isAuthenticated)) closeLoginModal();
+    if (e.key === '[') toggleSidebar();
+    if (e.key === '1') setRole('caregiver');
+    if (e.key === '2') setRole('patient');
+  });
+
+  function updateSidebarPatientBadge(name) {
+    const currentName = name || localStorage.getItem('careloop_patient_name') || 'Kamala Sharma';
+    const nameEl = document.getElementById('sidebar-patient-name');
+    if (nameEl) nameEl.textContent = currentName;
+    const avatarEl = document.querySelector('#sidebar-patient-card div:first-child');
+    if (avatarEl) {
+      const parts = currentName.trim().split(' ');
+      const initials = (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+      avatarEl.textContent = initials;
+    }
+  }
+
+  // ═══════════════════════════════════════
+  //  IFRAME → PARENT MESSAGE BUS
+  //  Handles clicks inside child screens
+  // ═══════════════════════════════════════
+  // ═══════════════════════════════════════
+  //  GLOBAL LANGUAGE & i18n SIMULATION (NER Focus)
+  // ═══════════════════════════════════════
+  const CORE_NAV_TRANSLATIONS = {
+    en: { home: "Home", games: "Games", family: "Family", meds: "Meds", voiceAi: "Voice AI" },
+    hi: { home: "मुख्य पृष्ठ", games: "खेल", family: "परिवार", meds: "दवाइयां", voiceAi: "आवाज़" },
+    as: { home: "হোম", games: "খেল", family: "পৰিয়াল", meds: "ঔষধ", voiceAi: "ভইচ এআই" },
+    brx: { home: "नोगोर", games: "गेलेनाय", family: "नखर", meds: "मुलि", voiceAi: "गोरा ए.आइ." }
+  };
+
+  currentAppLanguage = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
+
+  async function setGlobalLanguage(code) {
+    if (!code) return;
+    currentLang = code;
+    currentAppLanguage = code;
+    try {
+      localStorage.setItem('careloop_app_language', code);
+      localStorage.setItem('careloop_lang', code);
+    } catch(e) {}
+
+    const select = document.getElementById('global-lang-select');
+    if (select && select.value !== code) select.value = code;
+
+    // Call backend API if available
+    try {
+      if (window.careLoopApi && window.careLoopApi.setLanguage) {
+        await window.careLoopApi.setLanguage(code);
+      }
+    } catch(e) {}
+
+    // Translate Shell Navigation Items Immediately
+    const t = (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS[code]) 
+      || (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS['en']) 
+      || {};
+
+    // Role Tabs
+    const tabCare = document.querySelector('#tab-caregiver span:last-child');
+    if (tabCare && t.caregiverPortal) tabCare.textContent = t.caregiverPortal;
+    const tabPat = document.querySelector('#tab-patient span:last-child');
+    if (tabPat && t.patientMode) tabPat.textContent = t.patientMode;
+
+    // Caregiver Sidebar items
+    const navOverview = document.querySelector('#nav-09 .label');
+    if (navOverview && t.overview) navOverview.textContent = t.overview;
+    const navMeds = document.querySelector('#nav-10 .label');
+    if (navMeds && t.medication) navMeds.textContent = t.medication;
+    const navCognitive = document.querySelector('#nav-11 .label');
+    if (navCognitive && t.brainGames) navCognitive.textContent = t.brainGames;
+    const navVault = document.querySelector('#nav-12 .label');
+    if (navVault && t.familyPhotos) navVault.textContent = t.familyPhotos;
+    const navAlerts = document.querySelector('#nav-13 .label');
+    if (navAlerts && (t.alerts || t.anomalyAlerts)) navAlerts.textContent = t.alerts || t.anomalyAlerts;
+    const navCalling = document.querySelector('#nav-14 .label');
+    if (navCalling && t.familyCalling) navCalling.textContent = t.familyCalling;
+
+    // Patient bottom bar buttons
+    const pHome = document.getElementById('pnav-text-home');
+    if (pHome && t.home) pHome.textContent = t.home;
+    const pGames = document.getElementById('pnav-text-games');
+    if (pGames && t.games) pGames.textContent = t.games;
+    const pFamily = document.getElementById('pnav-text-family');
+    if (pFamily && t.family) pFamily.textContent = t.family;
+    const pMeds = document.getElementById('pnav-text-meds');
+    if (pMeds && t.meds) pMeds.textContent = t.meds;
+    const pVoice = document.getElementById('pnav-text-voice');
+    if (pVoice && t.voiceAi) pVoice.textContent = t.voiceAi;
+
+    // Update modal pills
+    document.querySelectorAll('.modal-lang-btn').forEach(btn => {
+      const c = btn.getAttribute('data-lang');
+      if (c === currentAppLanguage) {
+        btn.style.background = '#3B82F6';
+        btn.style.color = '#FFFFFF';
+        btn.style.borderColor = '#3B82F6';
+        btn.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+      } else {
+        btn.style.background = 'rgba(59, 130, 246, 0.08)';
+        btn.style.color = '#2563EB';
+        btn.style.borderColor = 'rgba(59, 130, 246, 0.25)';
+        btn.style.boxShadow = 'none';
+      }
+    });
+
+    // Broadcast to iframes
+    const frame = document.getElementById('frame');
+    const mobileFrame = document.getElementById('mobile-frame');
+    try {
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.postMessage({ type: 'languageChange', code: currentAppLanguage, appLanguage: currentAppLanguage }, '*');
+      }
+      if (mobileFrame && mobileFrame.contentWindow) {
+        mobileFrame.contentWindow.postMessage({ type: 'languageChange', code: currentAppLanguage, appLanguage: currentAppLanguage }, '*');
+      }
+    } catch(e) {}
+  }
+
+  window.addEventListener('message', e => {
+    if (!e.data) return;
+    if ((e.data.type === 'languageChange' || e.data.type === 'appLanguageChange') && e.data.code) {
+      setGlobalLanguage(e.data.code);
+    }
+
+    if (e.data.type === 'patientUpdated') {
+      const name = e.data.name || localStorage.getItem('careloop_patient_name') || 'Kamala Sharma';
+      updateSidebarPatientBadge(name);
+
+      // Forward to active frames
+      const frame = document.getElementById('frame');
+      const mobileFrame = document.getElementById('mobile-frame');
+      try {
+        if (frame && frame.contentWindow) {
+          frame.contentWindow.postMessage(e.data, '*');
+        }
+        if (mobileFrame && mobileFrame.contentWindow) {
+          mobileFrame.contentWindow.postMessage(e.data, '*');
+        }
+      } catch(err) {}
+    }
+
+    if (e.data.type === 'navigate') {
+      const r = e.data.route;
+      if (r) {
+        if (r.role === 'patient') {
+          setRole('patient');
+          patientNav(r.file, r.id);
+        } else if (r.role === 'dashboard') {
+          setRole('caregiver');
+          navigate('dashboard', r.file, r.navId, r.navId);
+        }
+      } else if (e.data.screen) {
+        if (e.data.section === 'patient') {
+          setRole('patient');
+          patientNav(e.data.screen, e.data.id || '01');
+        } else {
+          setRole('caregiver');
+          navigate('dashboard', e.data.screen, e.data.title || 'Overview', e.data.modeLabel || 'OVERVIEW / 09');
+        }
+      }
+    }
+  });
+
+  window.addEventListener('storage', e => {
+    if (e.key === 'careloop_patient_name') {
+      updateSidebarPatientBadge(e.newValue);
+    }
+  });
+</script>
+
+<!-- Material Symbols for icons (optional) -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+</body>
+</html>

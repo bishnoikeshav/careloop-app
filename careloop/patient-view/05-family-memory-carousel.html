@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Family Memory Vault</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script src="../shared/voiceManager.js"></script>
+<script src="../shared/sound.js"></script>
+<script src="../shared/api.js"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#00210f",
+                        "tertiary": "#9c3b49",
+                        "on-primary-fixed-variant": "#00522e",
+                        "inverse-primary": "#71db9a",
+                        "primary-container": "#00864e",
+                        "surface": "#F4F7F5",
+                        "on-surface": "#171d18",
+                        "text-primary": "#12201A",
+                        "surface-container-high": "#e4eae2",
+                        "tertiary-fixed-dim": "#ffb2b8",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#dee4dc",
+                        "inverse-on-surface": "#edf2ea",
+                        "tertiary-container": "#bb5360",
+                        "error-container": "#ffdad6",
+                        "secondary": "#456555",
+                        "on-secondary-fixed": "#012114",
+                        "surface-container-low": "#f0f5ed",
+                        "surface-container": "#eaefe8",
+                        "on-primary": "#ffffff",
+                        "on-background": "#171d18",
+                        "primary": "#006a3d",
+                        "surface-tint": "#006d3e",
+                        "primary-fixed": "#8df8b4",
+                        "on-secondary-fixed-variant": "#2e4d3e",
+                        "surface-bright": "#f5fbf3",
+                        "outline": "#6e7a70",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed": "#c7ebd6",
+                        "on-tertiary-container": "#fffbff",
+                        "tertiary-fixed": "#ffdadb",
+                        "background": "#FFFFFF",
+                        "on-primary-container": "#f6fff5",
+                        "danger": "#D64545",
+                        "border": "#DCE5E0",
+                        "secondary-fixed-dim": "#accfba",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#802635",
+                        "on-error": "#ffffff",
+                        "outline-variant": "#bdcabe",
+                        "primary-fixed-dim": "#71db9a",
+                        "on-surface-variant": "#3e4a40",
+                        "surface-container-highest": "#dee4dc",
+                        "secondary-container": "#c7ebd6",
+                        "inverse-surface": "#2c322d",
+                        "on-tertiary-fixed": "#40000f",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#4b6b5a",
+                        "surface-dim": "#d6dcd4"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "vault": "20px"
+                    },
+                    "spacing": {
+                        "lg": "32px",
+                        "touch-target-min": "64px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "xs": "8px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["20px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-sm": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                        "display-lg": ["40px", {"lineHeight": "48px", "fontWeight": "700"}],
+                        "headline-md": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                        "label-caps": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "body-lg": ["22px", {"lineHeight": "32px", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    /* Hide scrollbars while preserving scroll */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+    html, body { -ms-overflow-style: none; scrollbar-width: none; }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-text-primary font-body-sm min-h-screen flex flex-col antialiased max-w-[412px] mx-auto pb-24 overflow-y-auto no-scrollbar relative">
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full relative">
+<!-- Photo Section -->
+<div class="w-full h-[320px] rounded-t-vault bg-surface flex items-center justify-center relative overflow-hidden flex-shrink-0 border-b border-border">
+<img id="carousel-img" class="absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-300" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80"/>
+</div>
+<!-- Details Section -->
+<div class="px-lg py-lg bg-background flex-1 flex flex-col justify-between overflow-y-auto">
+<div class="flex flex-col items-center">
+<h1 id="carousel-name" class="font-display-lg text-display-lg text-text-primary text-center font-bold text-3xl">Priya</h1>
+<p id="carousel-relation" class="font-body-lg text-body-lg text-secondary text-center mt-xs text-[#2E9E63] font-medium">This is Priya — your daughter</p>
+<div class="h-md w-full my-3"></div> <!-- Spacer -->
+<button onclick="callCurrentPerson()" class="w-full h-14 bg-[#2E9E63] hover:bg-[#258552] text-white rounded-2xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-md font-semibold text-lg">
+<span class="material-symbols-outlined text-2xl">call</span>
+<span id="call-person-btn-label">Call Priya</span>
+</button>
+</div>
+<!-- Navigation Row -->
+<div class="flex items-center justify-between mt-auto pt-lg py-4">
+<button onclick="prevSlide()" aria-label="Previous" class="w-14 h-14 bg-surface rounded-2xl flex items-center justify-center text-text-primary transition-transform active:scale-95 border border-border shadow-sm">
+<span class="material-symbols-outlined text-3xl">chevron_left</span>
+</button>
+<div class="flex items-center gap-3" id="carousel-dots">
+  <!-- 4 dots rendered via JS -->
+</div>
+<button onclick="nextSlide()" aria-label="Next" class="w-14 h-14 bg-surface rounded-2xl flex items-center justify-center text-text-primary transition-transform active:scale-95 border border-border shadow-sm">
+<span class="material-symbols-outlined text-3xl">chevron_right</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Floating Back to Home -->
+<button onclick="goBackHome()" aria-label="Back to Home" class="absolute bottom-6 left-6 w-[56px] h-[56px] bg-white rounded-full flex items-center justify-center text-text-primary shadow-xl border border-border transition-transform active:scale-90 z-50">
+<span class="material-symbols-outlined text-2xl">home</span>
+</button>
+<script src="../shared/sound.js"></script>
+<script src="../shared/translations.js"></script>
+<script src="../shared/api.js"></script>
+<script>
+const CAROUSEL_MEMBERS = [
+  {
+    id: 'contact_priya',
+    name: 'Priya',
+    relation: 'This is Priya — your daughter & primary caregiver',
+    callLabel: 'Call Priya',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80'
+  },
+  {
+    id: 'contact_bose',
+    name: 'Dr. Ravi Bose',
+    relation: 'This is Dr. Bose — your attending physician',
+    callLabel: 'Call Dr. Bose',
+    avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=600&auto=format&fit=crop&q=80'
+  },
+  {
+    id: 'contact_ramesh',
+    name: 'Ramesh',
+    relation: 'This is Ramesh — your son',
+    callLabel: 'Call Ramesh',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80'
+  },
+  {
+    id: 'contact_meena',
+    name: 'Meena',
+    relation: 'This is Meena — your sister',
+    callLabel: 'Call Meena',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&auto=format&fit=crop&q=80'
+  }
+];
+
+let slideIdx = 0;
+
+function updateSlide() {
+  const member = CAROUSEL_MEMBERS[slideIdx];
+  const img = document.getElementById('carousel-img');
+  img.style.opacity = '0';
+
+  const activeLang = (typeof localStorage !== 'undefined' && (localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang'))) || 'en';
+  const t = (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS[activeLang])
+    || (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS['en'])
+    || {};
+
+  let relText = member.relation;
+  let callText = member.callLabel;
+
+  if (member.id === 'priya') {
+    if (t.priyaDesc) relText = t.priyaDesc;
+    if (t.callPriya) callText = t.callPriya;
+  } else if (member.id === 'ramesh') {
+    if (t.rameshDesc) relText = t.rameshDesc;
+    if (t.callRamesh) callText = t.callRamesh;
+  } else if (member.id === 'ananya') {
+    if (t.ananyaDesc) relText = t.ananyaDesc;
+    if (t.callAnanya) callText = t.callAnanya;
+  } else if (member.id === 'meena') {
+    if (t.meenaDesc) relText = t.meenaDesc;
+    if (t.callMeena) callText = t.callMeena;
+  } else if (member.id === 'doctor') {
+    if (t.doctorDesc) relText = t.doctorDesc;
+    if (t.callDoctor) callText = t.callDoctor;
+  }
+
+  setTimeout(() => {
+    img.src = member.avatar;
+    document.getElementById('carousel-name').textContent = member.name;
+    document.getElementById('carousel-relation').textContent = relText;
+    document.getElementById('call-person-btn-label').textContent = callText;
+    img.style.opacity = '1';
+    renderDots();
+  }, 150);
+}
+
+function renderDots() {
+  const c = document.getElementById('carousel-dots');
+  c.innerHTML = '';
+  for (let i = 0; i < CAROUSEL_MEMBERS.length; i++) {
+    const dot = document.createElement('div');
+    dot.className = `w-2.5 h-2.5 rounded-full transition-all duration-300 ${i === slideIdx ? 'bg-[#2E9E63] scale-125' : 'bg-[#DCE5E0]'}`;
+    c.appendChild(dot);
+  }
+}
+
+function nextSlide() {
+  slideIdx = (slideIdx + 1) % CAROUSEL_MEMBERS.length;
+  if (window.careLoopSound) window.careLoopSound.playCardFlip();
+  updateSlide();
+}
+
+function prevSlide() {
+  slideIdx = (slideIdx - 1 + CAROUSEL_MEMBERS.length) % CAROUSEL_MEMBERS.length;
+  if (window.careLoopSound) window.careLoopSound.playCardFlip();
+  updateSlide();
+}
+
+function callCurrentPerson() {
+  if (window.VoiceManager) window.VoiceManager.stop();
+  else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (window.careLoopSound) window.careLoopSound.playClick();
+  const currentMember = CAROUSEL_MEMBERS[slideIdx];
+  window.parent.postMessage({
+    type: 'navigate',
+    route: { role: 'patient', file: '06-one-touch-family-calling.html?call=' + encodeURIComponent(currentMember.id), id: '06' }
+  }, '*');
+}
+
+function goBackHome() {
+  if (window.VoiceManager) window.VoiceManager.stop();
+  else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (window.careLoopSound) window.careLoopSound.playClick();
+  window.parent.postMessage({
+    type: 'navigate',
+    route: { role: 'patient', file: '01-patient-home.html', id: '01' }
+  }, '*');
+}
+
+window.addEventListener('beforeunload', () => {
+  if (window.VoiceManager) window.VoiceManager.stop();
+  else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+});
+
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'languageChange' && e.data.code) {
+    applyLanguage(e.data.code);
+  }
+});
+
+function applyLanguage(code) {
+  const activeCode = code || (typeof localStorage !== 'undefined' && (localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang'))) || 'en';
+  if (typeof window.applyTranslationsToDOM === 'function') {
+    window.applyTranslationsToDOM(activeCode);
+  }
+  const t = (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS[activeCode])
+    || (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS['en'])
+    || {};
+
+  const titleEl = document.getElementById('lbl-vault-title');
+  if (titleEl && t.familyVaultTitle) titleEl.textContent = t.familyVaultTitle;
+
+  const subEl = document.getElementById('lbl-vault-sub');
+  if (subEl && t.familyVaultSubtitle) subEl.textContent = t.familyVaultSubtitle;
+
+  updateSlide();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  updateSlide();
+  const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
+  applyLanguage(activeLang);
+});
+</script>
+
+</body></html>
+

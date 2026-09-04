@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CareLoop Caregiver Dashboard — Medication Manager</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "on-secondary": "#2d312f",
+          "on-primary-fixed-variant": "#005230",
+          "error": "#ffb4ab",
+          "secondary-fixed": "#e0e3e0",
+          "error-container": "#93000a",
+          "on-primary": "#003920",
+          "inverse-surface": "#e2e3e0",
+          "inverse-on-surface": "#2f312f",
+          "on-surface": "#e2e3e0",
+          "on-error-container": "#ffdad6",
+          "danger": "#EF5A5A",
+          "on-surface-variant": "#bbcabd",
+          "surface-dim": "#121413",
+          "on-secondary-fixed": "#181c1a",
+          "on-tertiary-fixed-variant": "#6a3b00",
+          "secondary-container": "#444845",
+          "primary-container": "#4ade94",
+          "surface-container": "#1e201f",
+          "on-primary-fixed": "#002110",
+          "on-background": "#e2e3e0",
+          "outline-variant": "#3c4a40",
+          "on-error": "#690005",
+          "tertiary-fixed-dim": "#ffb873",
+          "primary-fixed": "#6dfdaf",
+          "surface": "#121514",
+          "on-tertiary": "#4a2800",
+          "text-primary": "#F4F6F4",
+          "secondary-fixed-dim": "#c4c7c4",
+          "outline": "#869489",
+          "tertiary": "#ffdbbc",
+          "primary": "#6bfbae",
+          "text-secondary": "#9BA8A2",
+          "on-primary-container": "#005e38",
+          "text-dim": "#5E6B65",
+          "on-secondary-fixed-variant": "#444845",
+          "surface-container-lowest": "#0d0f0e",
+          "background": "#0B0D0C",
+          "tertiary-fixed": "#ffdcbf",
+          "surface-container-low": "#1a1c1b",
+          "on-tertiary-container": "#794504",
+          "tertiary-container": "#ffb66f",
+          "secondary": "#c4c7c4",
+          "surface-container-high": "#282a29",
+          "surface-bright": "#383a38",
+          "border": "#26302C",
+          "on-secondary-container": "#b2b6b3",
+          "primary-fixed-dim": "#4cdf95",
+          "surface-container-highest": "#333534",
+          "surface-tint": "#4cdf95",
+          "inverse-primary": "#006d41",
+          "on-tertiary-fixed": "#2d1600",
+          "surface-variant": "#333534",
+          "surface-raised": "#1A1E1C",
+          "accent-primary": "#4ADE94",
+          "accent-warn": "#F5B942",
+          "accent-danger": "#EF5A5A",
+          "accent-info": "#5AA9F5"
+        },
+        "fontFamily": {
+          "sans": ["Inter", "sans-serif"],
+          "mono": ["JetBrains Mono", "monospace"]
+        }
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    background-color: #0B0D0C;
+    color: #F4F6F4;
+    font-family: 'Inter', sans-serif;
+  }
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .material-symbols-outlined.filled {
+    font-variation-settings: 'FILL' 1;
+  }
+  
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent; 
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #26302C; 
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #5E6B65; 
+  }
+  aside:first-of-type { display: none !important; }
+  body { min-height: 100vh; overflow-y: auto !important; }
+  
+  html.light body, html.light {
+    background-color: #F8FAF8 !important;
+    color: #12201A !important;
+  }
+  html.light .bg-surface {
+    background-color: #FFFFFF !important;
+    border-color: #DCE5E0 !important;
+  }
+  html.light .bg-surface-raised {
+    background-color: #F0F4F2 !important;
+    border-color: #DCE5E0 !important;
+  }
+  html.light .border-border {
+    border-color: #DCE5E0 !important;
+  }
+  html.light .text-text-primary {
+    color: #12201A !important;
+  }
+  html.light .text-text-secondary {
+    color: #527863 !important;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+</style>
+</head>
+<body class="flex min-h-screen overflow-y-auto antialiased">
+
+<!-- SIDEBAR (left 240px - hidden in shell) -->
+<aside class="w-[240px] flex-shrink-0 bg-background border-r border-border flex flex-col z-20">
+  <div class="p-6 flex items-center gap-3">
+    <div class="w-8 h-8 rounded bg-surface-raised border border-border flex items-center justify-center text-accent-primary font-bold">C</div>
+    <span class="text-xl tracking-tight font-bold">CareLoop</span>
+  </div>
+  <div class="px-4 mb-6">
+    <button class="w-full bg-surface hover:bg-surface-raised border border-border rounded-lg p-3 flex items-center justify-between transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-accent-primary/20 text-accent-primary font-bold font-mono text-xs flex items-center justify-center" id="sidebar-patient-avatar">
+          KS
+        </div>
+        <div class="text-left">
+          <div class="text-[11px] text-text-secondary uppercase tracking-wider">Patient</div>
+          <div class="text-sm text-text-primary font-medium" id="sidebar-patient-name">Kamala Sharma</div>
+        </div>
+      </div>
+      <span class="material-symbols-outlined text-text-secondary text-sm">unfold_more</span>
+    </button>
+  </div>
+  <nav class="flex-1 px-3 space-y-1 overflow-y-auto">
+    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors" href="09-dashboard-overview.html">
+      <span class="material-symbols-outlined text-[20px]">dashboard</span>
+      <span class="text-sm font-medium">Overview</span>
+    </a>
+    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-primary bg-surface-raised relative transition-colors" href="#">
+      <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-3/5 bg-accent-primary rounded-r-full"></div>
+      <span class="material-symbols-outlined text-[20px] text-accent-primary filled">medication</span>
+      <span class="text-sm font-medium">Medication</span>
+    </a>
+    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors" href="11-cognitive-analytics.html">
+      <span class="material-symbols-outlined text-[20px]">extension</span>
+      <span class="text-sm font-medium">Games & Cognitive</span>
+    </a>
+  </nav>
+</aside>
+
+<!-- MAIN CONTENT AREA -->
+<main class="flex-1 flex flex-col min-w-0 bg-surface">
+  <!-- TOP BAR -->
+  <header class="h-[72px] flex-shrink-0 border-b border-border bg-surface flex items-center justify-between px-6 z-10">
+    <div>
+      <h1 class="text-xl font-bold text-text-primary flex items-center gap-2.5">
+        Medication Manager
+        <span class="text-xs font-mono px-2 py-0.5 rounded bg-accent-primary/10 text-accent-primary border border-accent-primary/20" id="header-patient-name">Kamala Sharma</span>
+      </h1>
+      <p class="text-xs text-text-secondary mt-0.5">Manage daily prescriptions, OCR bottle scanning & tablet synchronizations</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="openManualAddModal()" class="h-10 px-4 rounded-lg border border-border bg-surface-raised hover:bg-surface text-text-primary text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-sm">
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        Add Manually
+      </button>
+      <button onclick="triggerOcrScan()" class="h-10 px-4 rounded-lg bg-accent-primary text-background text-xs font-bold hover:bg-primary-fixed-dim transition-colors flex items-center gap-2 shadow-[0_0_12px_rgba(74,222,148,0.25)] cursor-pointer">
+        <span class="material-symbols-outlined text-[18px]">document_scanner</span>
+        Scan Medication
+      </button>
+    </div>
+  </header>
+
+  <!-- SCROLLABLE CONTENT -->
+  <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-8 relative">
+
+    <!-- SECTION A: OCR SCANNER MODAL (In-page Presentation) -->
+    <section class="flex justify-center w-full">
+      <div class="w-full max-w-4xl bg-surface rounded-[14px] border border-border shadow-xl flex flex-col overflow-hidden">
+        <!-- Code-Editor Chrome Header -->
+        <div class="h-10 bg-surface-raised border-b border-border flex items-center px-4 justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-[#EF5A5A]/30 border border-[#EF5A5A]/60"></div>
+            <div class="w-3 h-3 rounded-full bg-[#F5B942]/30 border border-[#F5B942]/60"></div>
+            <div class="w-3 h-3 rounded-full bg-[#4ADE94]/30 border border-[#4ADE94]/60"></div>
+          </div>
+          <div class="font-mono text-[11px] text-text-dim tracking-wider font-medium flex items-center gap-2">
+            <span class="material-symbols-outlined text-[14px]">terminal</span>
+            MEDICATION-SCANNER.TSX
+          </div>
+          <span class="text-[10px] font-mono text-accent-primary uppercase tracking-wider bg-accent-primary/10 px-2 py-0.5 rounded border border-accent-primary/20">OCR v2.4</span>
+        </div>
+
+        <div class="p-6 flex flex-col gap-6">
+          <!-- Steps -->
+          <div class="flex items-center justify-between border-b border-border pb-4">
+            <div class="font-mono text-[10px] text-accent-primary tracking-widest bg-accent-primary/10 px-2 py-1 rounded">
+              MEDICATION / 02
+            </div>
+            <div class="flex items-center gap-2 font-mono text-xs">
+              <span class="text-text-dim" id="step-cap-pill">[01 CAPTURE]</span>
+              <span class="text-border">→</span>
+              <span class="text-accent-primary bg-accent-primary/10 px-2 py-0.5 rounded border border-accent-primary/20" id="step-rev-pill">[02 REVIEW]</span>
+              <span class="text-border">→</span>
+              <span class="text-text-dim" id="step-conf-pill">[03 CONFIRM]</span>
+            </div>
+          </div>
+
+          <!-- Content Area (Step 02 State) -->
+          <div class="flex flex-col md:flex-row gap-6">
+            <!-- Left: Camera Preview -->
+            <div class="w-full md:w-[260px] flex-shrink-0 flex flex-col gap-3">
+              <div class="w-full aspect-[3/4] rounded-xl border-2 border-dashed border-border relative overflow-hidden bg-surface-raised flex items-center justify-center group shadow-inner">
+                <div class="absolute inset-0 z-0">
+                  <img id="pill-bottle-img" class="w-full h-full object-cover opacity-65 mix-blend-luminosity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcpYIH0TBvKCVG3g3DJoxsCfmdi4jr0AtQmFjGaclRhsiXjo4L42wRMEy7z_jqYTmv0_iXM_leUHIzAnUYgae28TWVhgsCUZaaITOxzQx96HTAPJxMOHVJxB_SqrZHtf7bX5iE5kowK-XVVPcrmDlhUxBqjPQPHKGfsJSB7H6pY6YtJ9DRC3r8JSSfU3eFupwRg-Ez5TMd02wYd0mr0iVsU_AXjMHvr8AvKZWK2MBsVFg48UIeZ6ujHQ1ts1O7Pmz88xdkBLkHxuY"/>
+                </div>
+                
+                <!-- Scanning Overlay -->
+                <div id="scan-overlay" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/50 backdrop-blur-[2px]">
+                  <div class="w-12 h-12 rounded-full bg-surface border border-border flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(74,222,148,0.15)] relative">
+                    <svg id="ocr-spinner" class="text-accent-primary w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                      <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="currentColor"></path>
+                    </svg>
+                    <div class="absolute inset-0 rounded-full border border-accent-primary/30 animate-ping"></div>
+                  </div>
+                  <span id="ocr-status-text" class="font-mono text-[10px] text-accent-primary tracking-widest uppercase font-semibold">Reading label...</span>
+                </div>
+
+                <!-- Scanner Line Effect -->
+                <div id="scanner-laser" class="absolute top-0 left-0 w-full h-0.5 bg-accent-primary/80 shadow-[0_0_12px_#4ADE94] z-20 animate-[scan_2s_ease-in-out_infinite_alternate]"></div>
+                <style>
+                  @keyframes scan {
+                    0% { top: 10%; }
+                    100% { top: 90%; }
+                  }
+                </style>
+              </div>
+              <button onclick="triggerOcrScan()" class="w-full py-2 bg-surface border border-border hover:border-accent-primary/50 text-text-secondary hover:text-text-primary rounded-lg text-xs font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">flip_camera_ios</span>
+                Rescan Label
+              </button>
+            </div>
+
+            <!-- Right: Editable Form Auto-filled from OCR -->
+            <div class="flex-1 flex flex-col gap-4">
+              <div class="space-y-4">
+                <div>
+                  <label class="block font-mono text-[11px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">MEDICATION NAME</label>
+                  <input id="ocr-med-name" class="w-full bg-surface-raised border border-border rounded-lg px-3.5 py-2 text-text-primary text-sm focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/50 outline-none transition-all" type="text" value="Metformin"/>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block font-mono text-[11px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">DOSAGE</label>
+                    <input id="ocr-dosage" class="w-full bg-surface-raised border border-border rounded-lg px-3.5 py-2 text-text-primary text-sm focus:border-accent-primary outline-none transition-all" type="text" value="500mg"/>
+                  </div>
+                  <div>
+                    <label class="block font-mono text-[11px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">FREQUENCY</label>
+                    <input id="ocr-frequency" class="w-full bg-surface-raised border border-border rounded-lg px-3.5 py-2 text-text-primary text-sm focus:border-accent-primary outline-none transition-all" type="text" value="Twice daily"/>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block font-mono text-[11px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">SCHEDULED TIMES</label>
+                  <div class="flex flex-wrap gap-2" id="ocr-times-wrap">
+                    <div class="bg-surface-raised border border-border rounded-lg px-3 py-1.5 flex items-center gap-2 text-text-primary font-mono text-xs">
+                      <span class="material-symbols-outlined text-[14px] text-accent-info">light_mode</span>
+                      <span>8:00 AM</span>
+                      <button onclick="this.parentElement.remove()" class="text-text-dim hover:text-accent-danger transition-colors ml-1 cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px]">close</span>
+                      </button>
+                    </div>
+                    <div class="bg-surface-raised border border-border rounded-lg px-3 py-1.5 flex items-center gap-2 text-text-primary font-mono text-xs">
+                      <span class="material-symbols-outlined text-[14px] text-text-secondary">dark_mode</span>
+                      <span>8:00 PM</span>
+                      <button onclick="this.parentElement.remove()" class="text-text-dim hover:text-accent-danger transition-colors ml-1 cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px]">close</span>
+                      </button>
+                    </div>
+                    <button onclick="promptAddTime()" class="bg-surface border border-dashed border-border hover:border-accent-primary rounded-lg px-3 py-1.5 flex items-center justify-center text-text-dim hover:text-text-primary transition-colors cursor-pointer" title="Add another scheduled time">
+                      <span class="material-symbols-outlined text-[14px]">add</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block font-mono text-[11px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">PATIENT INSTRUCTIONS / NOTES</label>
+                  <textarea id="ocr-notes" class="w-full bg-surface-raised border border-border rounded-lg px-3 py-2 text-text-primary text-xs focus:border-accent-primary outline-none transition-all h-16 resize-none">Take 1 tablet with water immediately after breakfast and dinner.</textarea>
+                </div>
+              </div>
+
+              <!-- Confidence / Verification Notice -->
+              <div id="ocr-notice-badge" class="bg-accent-primary/10 border border-accent-primary/30 rounded-lg p-3 flex items-start gap-2.5">
+                <span class="material-symbols-outlined text-accent-primary text-[18px] mt-0.5">verified</span>
+                <div class="text-xs text-text-secondary leading-snug">
+                  <span class="text-text-primary font-semibold">OCR Verification Score: 98% Match.</span> Prescription label parsed successfully. Confirm details and push to patient's tablet.
+                </div>
+              </div>
+
+              <div class="mt-auto flex justify-end gap-3 pt-4 border-t border-border">
+                <button onclick="resetOcrForm()" class="px-4 py-2 rounded-lg border border-border bg-transparent text-text-secondary text-xs font-semibold hover:text-text-primary hover:bg-surface-raised transition-colors cursor-pointer">
+                  Reset
+                </button>
+                <button onclick="saveScannedMedication()" class="px-5 py-2 rounded-lg bg-accent-primary text-background text-xs font-bold hover:bg-primary-fixed-dim transition-colors shadow-[0_0_12px_rgba(74,222,148,0.25)] flex items-center gap-1.5 cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">send</span>
+                  Save & Push to Patient
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION B: ACTIVE MEDICATIONS TABLE -->
+    <section class="w-full bg-surface rounded-[14px] border border-border shadow-md overflow-hidden">
+      <div class="p-6 border-b border-border flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="font-mono text-[10px] text-accent-primary tracking-widest bg-accent-primary/10 px-2 py-1 rounded inline-block mb-1">
+            MEDICATIONS / 03
+          </div>
+          <h2 class="text-lg font-bold text-text-primary flex items-center gap-2">
+            Active Medications Regimen
+            <span id="med-count-badge" class="bg-surface-raised border border-border text-xs px-2.5 py-0.5 rounded-full text-accent-primary font-mono font-bold">3 Active</span>
+          </h2>
+          <p class="text-xs text-text-secondary mt-0.5">Real-time synchronization with patient's tablet reminder schedule</p>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-dim text-[18px]">search</span>
+            <input type="text" id="med-search-input" oninput="filterMedications()" placeholder="Search medication..." class="bg-surface-raised border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-text-primary focus:border-accent-primary outline-none w-48 transition-all"/>
+          </div>
+          <select id="med-status-filter" onchange="filterMedications()" class="bg-surface-raised border border-border rounded-lg px-3 py-2 text-xs text-text-primary focus:border-accent-primary outline-none cursor-pointer">
+            <option value="all">All Statuses</option>
+            <option value="active">Active Only</option>
+            <option value="missed">Needs Review / Missed</option>
+            <option value="paused">Paused</option>
+          </select>
+          <button onclick="openManualAddModal()" class="h-9 px-3 rounded-lg bg-surface-raised hover:bg-border border border-border text-accent-primary text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">add</span> Add New
+          </button>
+        </div>
+      </div>
+
+      <!-- Table Component -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-surface-raised border-b border-border text-[11px] font-mono text-text-dim uppercase tracking-wider">
+            <tr>
+              <th class="py-3.5 px-4 font-medium">Medication</th>
+              <th class="py-3.5 px-4 font-medium">Dosage</th>
+              <th class="py-3.5 px-4 font-medium">Schedule</th>
+              <th class="py-3.5 px-4 font-medium">Adherence (7-Day)</th>
+              <th class="py-3.5 px-4 font-medium">Status</th>
+              <th class="py-3.5 px-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="med-table-body" class="divide-y divide-border">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+      <div class="p-4 border-t border-border flex items-center justify-between text-xs text-text-dim">
+        <span id="med-pagination-info">Showing 3 of 3 medications</span>
+        <span class="flex items-center gap-1 text-accent-primary font-medium">
+          <span class="w-2 h-2 rounded-full bg-accent-primary animate-pulse"></span> Auto-synced to patient tablet
+        </span>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- RIGHT DRAWER (420px) -->
+<aside id="med-detail-drawer" class="w-[420px] flex-shrink-0 bg-surface-raised border-l border-border flex flex-col z-20 shadow-[-8px_0_24px_rgba(0,0,0,0.25)] transition-all duration-300">
+  <div class="p-6 border-b border-border flex items-center justify-between">
+    <div class="font-mono text-[10px] text-text-dim tracking-widest bg-surface px-2 py-1 rounded border border-border">
+      ADHERENCE HISTORY / 04
+    </div>
+    <button onclick="closeDrawer()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface text-text-secondary hover:text-text-primary transition-colors cursor-pointer" title="Close Drawer">
+      <span class="material-symbols-outlined text-[20px]">close</span>
+    </button>
+  </div>
+  <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+    <!-- Drawer Header Info -->
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-accent-primary" id="drawer-pill-icon">
+          <span class="material-symbols-outlined text-[20px]">medication</span>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-text-primary leading-tight" id="drawer-med-name">Lisinopril</h2>
+          <p class="text-xs text-text-secondary" id="drawer-med-sub">10mg · Once daily (8:00 PM)</p>
+        </div>
+      </div>
+      <div id="drawer-alert-badge" class="flex items-center gap-2 mt-3 bg-surface p-3 rounded-lg border border-border text-xs">
+        <span class="material-symbols-outlined text-accent-warn text-[18px]">warning</span>
+        <span class="text-text-primary font-medium" id="drawer-alert-text">Evening dose flagged for verification.</span>
+      </div>
+    </div>
+
+    <!-- Mini Calendar Grid (7-Day Adherence) -->
+    <div>
+      <label class="block font-mono text-[10px] text-text-dim uppercase tracking-wider mb-2 font-semibold">7-DAY ADHERENCE HISTORY</label>
+      <div class="grid grid-cols-7 gap-2" id="drawer-adherence-grid">
+        <!-- Mon -->
+        <div class="flex flex-col items-center gap-1">
+          <span class="font-mono text-[10px] text-text-dim">M</span>
+          <div class="w-8 h-8 rounded bg-surface border border-border flex items-center justify-center">
+            <span class="material-symbols-outlined text-[16px] text-accent-primary">check_circle</span>
+          </div>
+        </div>
+        <!-- Tue -->
+        <div class="flex flex-col items-center gap-1">
+          <span class="font-mono text-[10px] text-text-dim">T</span>
+          <div class="w-8 h-8 rounded bg-surface border border-border flex items-center justify-center">
+            <span class="material-symbols-outlined text-[16px] text-accent-primary">check_circle</span>
+          </div>
+        </div>
+        <!-- Wed -->
+        <div class="flex flex-col items-center gap-1">
+          <span class="font-mono text-[10px] text-text-dim">W</span>
+          <div class="w-8 h-8 rounded bg-surface border border-border flex items-center justify-center">
+            <span class="material-symbols-outlined text-[16px] text-accent-primary">check_circle</span>
+          </div>
+        </div>
+        <!-- Thu -->
+        <div class="flex flex-col items-center gap-1">
+          <span class="font-mono text-[10px] text-text-dim">T</span>
+          <div class="w-8 h-8 rounded bg-surface border border-border flex items-center justify-center">
+            <span class="material-symbols-outlined text-[16px] text-accent-primary">check_circle</span>
+          </div>
+        </div>
+        <!-- Fri -->
+        <div class="flex flex-col items-center gap-1">
+          <span class="font-mono text-[10px] text-text-dim">F</span>
+          <div class="w-8 h-8 rounded bg-surface border border-border flex items-center justify-center">
+            <span class="material-symbols-outlined text-[16px] text-accent-primary">check_circle</span>
+          </div>
+        </div>
+        <!-- Sat (Missed) -->
+        <div class="flex flex-col items-center gap-1">
+          <span class="font-mono text-[10px] text-text-primary font-medium">S</span>
+          <div class="w-8 h-8 rounded bg-accent-danger/10 border border-accent-danger/30 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[16px] text-accent-danger">cancel</span>
+          </div>
+        </div>
+        <!-- Sun (Today) -->
+        <div class="flex flex-col items-center gap-1">
+          <span class="font-mono text-[10px] text-text-primary font-bold">S</span>
+          <div class="w-8 h-8 rounded bg-surface border border-dashed border-text-secondary flex items-center justify-center relative">
+            <div class="w-1.5 h-1.5 rounded-full bg-accent-primary animate-ping"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Editable Fields in Drawer -->
+    <div class="space-y-4 pt-4 border-t border-border">
+      <label class="block font-mono text-[10px] text-text-dim uppercase tracking-wider font-semibold">EDIT CONFIGURATION</label>
+      <div>
+        <label class="block text-[11px] text-text-secondary mb-1">INSTRUCTIONS</label>
+        <textarea id="drawer-instructions" class="w-full bg-surface border border-border rounded-lg px-3 py-2 text-text-primary text-xs focus:border-accent-primary outline-none transition-all h-20 resize-none">Take 1 tablet by mouth once daily in the evening.</textarea>
+      </div>
+      <div class="flex items-center justify-between p-3 bg-surface rounded-lg border border-border">
+        <div>
+          <div class="text-xs text-text-primary font-medium">Require Patient Confirmation</div>
+          <div class="text-[10px] text-text-dim mt-0.5">Companion tablet triggers full takeover prompt.</div>
+        </div>
+        <button onclick="toggleConfirmationRequirement(this)" class="w-10 h-5 bg-accent-primary/20 rounded-full flex items-center p-0.5 relative cursor-pointer border border-accent-primary/30">
+          <div class="w-4 h-4 bg-accent-primary rounded-full absolute right-0.5 shadow-sm"></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer Actions -->
+  <div class="p-6 border-t border-border bg-surface-raised flex flex-col gap-3">
+    <button onclick="saveDrawerChanges()" class="w-full py-2.5 rounded-lg bg-accent-primary text-background text-xs font-bold hover:bg-primary-fixed-dim transition-colors shadow-[0_0_12px_rgba(74,222,148,0.2)] cursor-pointer">
+      Save Changes
+    </button>
+    <button id="drawer-pause-btn" onclick="toggleDrawerPause()" class="w-full py-2.5 rounded-lg border border-accent-danger/50 text-accent-danger text-xs font-medium hover:bg-accent-danger/10 transition-colors cursor-pointer">
+      Pause Medication
+    </button>
+  </div>
+</aside>
+
+<!-- MANUAL ADD MODAL -->
+<div id="manual-add-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+  <div class="bg-surface border border-border rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-fadeIn">
+    <!-- Header -->
+    <div class="px-6 py-4 bg-surface-raised border-b border-border flex items-center justify-between">
+      <div class="flex items-center gap-2 font-mono text-xs text-text-dim font-medium">
+        <span class="material-symbols-outlined text-accent-primary text-[18px]">add_circle</span>
+        <span>ADD_PRESCRIPTION.TSX</span>
+      </div>
+      <button onclick="closeManualAddModal()" class="w-8 h-8 rounded-lg hover:bg-surface flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+    <!-- Form -->
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block font-mono text-[10px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">MEDICATION BRAND NAME</label>
+        <input type="text" id="manual-med-name" placeholder="e.g. Donepezil" class="w-full bg-surface-raised border border-border rounded-lg px-3.5 py-2 text-text-primary text-sm focus:border-accent-primary outline-none font-medium"/>
+      </div>
+      <div>
+        <label class="block font-mono text-[10px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">GENERIC / CHEMICAL NAME</label>
+        <input type="text" id="manual-med-generic" placeholder="e.g. Donepezil Hydrochloride" class="w-full bg-surface-raised border border-border rounded-lg px-3.5 py-2 text-text-primary text-sm focus:border-accent-primary outline-none"/>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block font-mono text-[10px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">DOSAGE</label>
+          <input type="text" id="manual-med-dosage" placeholder="e.g. 10mg" class="w-full bg-surface-raised border border-border rounded-lg px-3.5 py-2 text-text-primary text-sm focus:border-accent-primary outline-none font-mono"/>
+        </div>
+        <div>
+          <label class="block font-mono text-[10px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">FREQUENCY</label>
+          <select id="manual-med-frequency" class="w-full bg-surface-raised border border-border rounded-lg px-3.5 py-2 text-text-primary text-sm focus:border-accent-primary outline-none cursor-pointer">
+            <option value="Once daily">Once daily</option>
+            <option value="Twice daily" selected>Twice daily</option>
+            <option value="Three times daily">Three times daily</option>
+            <option value="As needed (PRN)">As needed (PRN)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block font-mono text-[10px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">SCHEDULED TIME(S)</label>
+        <input type="text" id="manual-med-times" placeholder="e.g. 8:00 AM, 8:00 PM" value="8:00 AM, 8:00 PM" class="w-full bg-surface-raised border border-border rounded-lg px-3.5 py-2 text-text-primary text-sm focus:border-accent-primary outline-none font-mono"/>
+      </div>
+      <div>
+        <label class="block font-mono text-[10px] text-text-secondary uppercase tracking-wider mb-1 font-semibold">SPECIAL PATIENT INSTRUCTIONS</label>
+        <textarea id="manual-med-instructions" rows="2" placeholder="e.g. Take with water after breakfast" class="w-full bg-surface-raised border border-border rounded-lg px-3 py-2 text-text-primary text-xs focus:border-accent-primary outline-none resize-none">Take with a full glass of water.</textarea>
+      </div>
+    </div>
+    <!-- Actions -->
+    <div class="px-6 py-4 bg-surface-raised border-t border-border flex items-center justify-end gap-3">
+      <button onclick="closeManualAddModal()" class="px-4 py-2 rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-surface text-xs font-semibold transition-colors cursor-pointer">
+        Cancel
+      </button>
+      <button onclick="saveManualMedication()" class="px-5 py-2 rounded-lg bg-accent-primary text-background font-bold text-xs hover:bg-primary-fixed-dim transition-colors shadow-md cursor-pointer flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[16px]">save</span>
+        Save & Push to Patient
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+<script src="../shared/sound.js"></script>
+<script src="../shared/translations.js"></script>
+<script src="../shared/api.js"></script>
+
+<script>
+  // Default medications data
+  const DEFAULT_MEDICATIONS = [
+    {
+      id: "med_1",
+      name: "Metformin",
+      generic: "metformin hydrochloride",
+      dosage: "500mg",
+      schedule: "2x daily · 8:00 AM – 8:00 PM",
+      adherence: 87,
+      status: "Active",
+      instructions: "Take 1 tablet by mouth with breakfast and dinner.",
+      type: "tablet"
+    },
+    {
+      id: "med_2",
+      name: "Lisinopril",
+      generic: "lisinopril dihydrate",
+      dosage: "10mg",
+      schedule: "1x daily · 8:00 PM",
+      adherence: 62,
+      status: "Missed",
+      instructions: "Take 1 tablet by mouth once daily in the evening.",
+      type: "capsule"
+    },
+    {
+      id: "med_3",
+      name: "Atorvastatin",
+      generic: "atorvastatin calcium",
+      dosage: "40mg",
+      schedule: "1x daily · Bedtime",
+      adherence: 94,
+      status: "Active",
+      instructions: "Take 1 tablet at bedtime with or without food.",
+      type: "tablet"
+    }
+  ];
+
+  let currentSelectedMedId = "med_2";
+
+  function getMedications() {
+    try {
+      const saved = localStorage.getItem('careloop_medications');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch(e) {}
+    localStorage.setItem('careloop_medications', JSON.stringify(DEFAULT_MEDICATIONS));
+    return DEFAULT_MEDICATIONS;
+  }
+
+  function setMedications(meds) {
+    localStorage.setItem('careloop_medications', JSON.stringify(meds));
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'medicationsUpdated' }, '*');
+    }
+  }
+
+  // Toast feedback
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    const borderCol = type === 'success' ? 'border-[#4ADE94]' : type === 'warn' ? 'border-[#F5B942]' : 'border-[#EF5A5A]';
+    const textCol = type === 'success' ? 'text-[#4ADE94]' : type === 'warn' ? 'text-[#F5B942]' : 'text-[#EF5A5A]';
+    const icon = type === 'success' ? 'check_circle' : type === 'warn' ? 'warning' : 'info';
+    
+    toast.className = `bg-[#1A1E1C] border ${borderCol} rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3 text-xs text-[#F4F6F4] pointer-events-auto animate-fadeIn max-w-xs`;
+    toast.innerHTML = `
+      <span class="material-symbols-outlined ${textCol} text-[18px]">${icon}</span>
+      <span class="font-medium">${message}</span>
+    `;
+    container.appendChild(toast);
+    if (window.careLoopSound) window.careLoopSound.playSuccess();
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s';
+      setTimeout(() => toast.remove(), 300);
+    }, 3200);
+  }
+
+  // Sync patient name dynamically
+  function syncPatientName() {
+    const pName = localStorage.getItem('careloop_patient_name') || 'Kamala Sharma';
+    const headerEl = document.getElementById('header-patient-name');
+    if (headerEl) headerEl.textContent = pName;
+    const sidebarEl = document.getElementById('sidebar-patient-name');
+    if (sidebarEl) sidebarEl.textContent = pName;
+    const avatarEl = document.getElementById('sidebar-patient-avatar');
+    if (avatarEl) {
+      const parts = pName.trim().split(' ');
+      const initials = (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+      avatarEl.textContent = initials;
+    }
+  }
+
+  // Render Table
+  function renderMedicationsTable() {
+    const meds = getMedications();
+    const tbody = document.getElementById('med-table-body');
+    const badge = document.getElementById('med-count-badge');
+    const pagination = document.getElementById('med-pagination-info');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    const activeCount = meds.filter(m => m.status === 'Active').length;
+    if (badge) badge.textContent = `${activeCount} Active`;
+    if (pagination) pagination.textContent = `Showing ${meds.length} of ${meds.length} medications`;
+
+    meds.forEach(med => {
+      const tr = document.createElement('tr');
+      tr.className = `hover:bg-surface-raised transition-colors cursor-pointer ${med.id === currentSelectedMedId ? 'bg-surface-raised/60' : ''}`;
+      tr.onclick = (e) => {
+        if (!e.target.closest('button')) openDrawer(med.id);
+      };
+
+      // Adherence bar color
+      let barColor = 'bg-accent-primary';
+      let barTextColor = 'text-accent-primary';
+      if (med.adherence < 70) {
+        barColor = 'bg-accent-warn';
+        barTextColor = 'text-accent-warn';
+      }
+      if (med.adherence < 50) {
+        barColor = 'bg-accent-danger';
+        barTextColor = 'text-accent-danger';
+      }
+
+      // Status pill
+      let statusBadge = '';
+      if (med.status === 'Active') {
+        statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-accent-primary/10 text-accent-primary border border-accent-primary/20"><span class="w-1.5 h-1.5 rounded-full bg-accent-primary"></span>Active</span>`;
+      } else if (med.status === 'Missed') {
+        statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-accent-warn/10 text-accent-warn border border-accent-warn/20"><span class="w-1.5 h-1.5 rounded-full bg-accent-warn"></span>⚠ Missed</span>`;
+      } else {
+        statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-surface-raised text-text-dim border border-border">Paused</span>`;
+      }
+
+      tr.innerHTML = `
+        <td class="py-4 px-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-surface-raised border border-border flex items-center justify-center text-accent-primary">
+              <span class="material-symbols-outlined text-[20px]">${med.type === 'capsule' ? 'pill' : 'medication'}</span>
+            </div>
+            <div>
+              <div class="font-bold text-text-primary text-sm">${med.name}</div>
+              <div class="text-[11px] text-text-dim">${med.generic || 'prescribed'}</div>
+            </div>
+          </div>
+        </td>
+        <td class="py-4 px-4 font-mono text-xs text-text-primary font-medium">${med.dosage}</td>
+        <td class="py-4 px-4 text-xs text-text-secondary">${med.schedule}</td>
+        <td class="py-4 px-4">
+          <div class="flex items-center gap-2.5">
+            <div class="w-24 bg-surface-raised rounded-full h-1.5 border border-border overflow-hidden">
+              <div class="${barColor} h-full rounded-full" style="width: ${med.adherence}%"></div>
+            </div>
+            <span class="font-mono text-xs ${barTextColor} font-medium">${med.adherence}%</span>
+          </div>
+        </td>
+        <td class="py-4 px-4">${statusBadge}</td>
+        <td class="py-4 px-4 text-right">
+          <div class="flex items-center justify-end gap-1">
+            <button onclick="openDrawer('${med.id}')" class="px-2.5 py-1 text-xs text-text-secondary hover:text-accent-primary hover:bg-surface rounded transition-colors" title="Edit details">
+              Edit
+            </button>
+            <button onclick="togglePauseMedication('${med.id}', event)" class="px-2.5 py-1 text-xs ${med.status === 'Paused' ? 'text-accent-primary' : 'text-accent-warn'} hover:bg-surface rounded transition-colors" title="Pause or Resume">
+              ${med.status === 'Paused' ? 'Resume' : 'Pause'}
+            </button>
+            <button onclick="deleteMedication('${med.id}', event)" class="w-7 h-7 flex items-center justify-center text-text-dim hover:text-accent-danger hover:bg-surface rounded transition-colors" title="Delete prescription">
+              <span class="material-symbols-outlined text-[16px]">delete</span>
+            </button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Filter Table
+  function filterMedications() {
+    const q = (document.getElementById('med-search-input')?.value || '').toLowerCase();
+    const filterStatus = document.getElementById('med-status-filter')?.value || 'all';
+    const rows = document.querySelectorAll('#med-table-body tr');
+
+    rows.forEach(row => {
+      const text = row.innerText.toLowerCase();
+      const matchesSearch = text.includes(q);
+      let matchesStatus = true;
+      if (filterStatus === 'active') matchesStatus = text.includes('active');
+      else if (filterStatus === 'missed') matchesStatus = text.includes('missed');
+      else if (filterStatus === 'paused') matchesStatus = text.includes('paused');
+
+      row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+    });
+  }
+
+  // Right Drawer functions
+  function openDrawer(medId) {
+    currentSelectedMedId = medId;
+    const meds = getMedications();
+    const med = meds.find(m => m.id === medId) || meds[0];
+    if (!med) return;
+
+    const drawer = document.getElementById('med-detail-drawer');
+    if (drawer) drawer.classList.remove('hidden');
+
+    document.getElementById('drawer-med-name').textContent = med.name;
+    document.getElementById('drawer-med-sub').textContent = `${med.dosage} · ${med.schedule}`;
+    document.getElementById('drawer-instructions').value = med.instructions || 'Take 1 tablet daily.';
+
+    const alertBadge = document.getElementById('drawer-alert-badge');
+    const alertText = document.getElementById('drawer-alert-text');
+    if (med.status === 'Missed') {
+      alertBadge.className = 'flex items-center gap-2 mt-3 bg-surface p-3 rounded-lg border border-accent-warn text-xs';
+      alertText.textContent = 'Missed yesterday\'s evening dose. Follow up recommended.';
+    } else if (med.status === 'Paused') {
+      alertBadge.className = 'flex items-center gap-2 mt-3 bg-surface p-3 rounded-lg border border-border text-xs text-text-dim';
+      alertText.textContent = 'Medication regimen is currently paused.';
+    } else {
+      alertBadge.className = 'flex items-center gap-2 mt-3 bg-surface p-3 rounded-lg border border-accent-primary/40 text-xs text-accent-primary';
+      alertText.textContent = 'Active on companion tablet. Adherence is optimal.';
+    }
+
+    const pauseBtn = document.getElementById('drawer-pause-btn');
+    if (pauseBtn) {
+      pauseBtn.textContent = med.status === 'Paused' ? 'Resume Medication' : 'Pause Medication';
+      pauseBtn.className = med.status === 'Paused' 
+        ? 'w-full py-2.5 rounded-lg border border-accent-primary/50 text-accent-primary text-xs font-semibold hover:bg-accent-primary/10 transition-colors cursor-pointer'
+        : 'w-full py-2.5 rounded-lg border border-accent-danger/50 text-accent-danger text-xs font-medium hover:bg-accent-danger/10 transition-colors cursor-pointer';
+    }
+
+    renderMedicationsTable();
+  }
+
+  function closeDrawer() {
+    const drawer = document.getElementById('med-detail-drawer');
+    if (drawer) drawer.classList.add('hidden');
+  }
+
+  function saveDrawerChanges() {
+    const meds = getMedications();
+    const med = meds.find(m => m.id === currentSelectedMedId);
+    if (med) {
+      med.instructions = document.getElementById('drawer-instructions').value;
+      setMedications(meds);
+      renderMedicationsTable();
+      showToast(`Saved changes for ${med.name}`);
+    }
+  }
+
+  function toggleDrawerPause() {
+    const meds = getMedications();
+    const med = meds.find(m => m.id === currentSelectedMedId);
+    if (med) {
+      med.status = med.status === 'Paused' ? 'Active' : 'Paused';
+      setMedications(meds);
+      openDrawer(med.id);
+      showToast(`${med.name} is now ${med.status}`);
+    }
+  }
+
+  function togglePauseMedication(medId, event) {
+    if (event) event.stopPropagation();
+    const meds = getMedications();
+    const med = meds.find(m => m.id === medId);
+    if (med) {
+      med.status = med.status === 'Paused' ? 'Active' : 'Paused';
+      setMedications(meds);
+      renderMedicationsTable();
+      if (currentSelectedMedId === medId) openDrawer(medId);
+      showToast(`${med.name} ${med.status === 'Paused' ? 'paused' : 'resumed'}`);
+    }
+  }
+
+  function deleteMedication(medId, event) {
+    if (event) event.stopPropagation();
+    let meds = getMedications();
+    const med = meds.find(m => m.id === medId);
+    if (!med) return;
+    if (confirm(`Remove prescription for ${med.name}?`)) {
+      meds = meds.filter(m => m.id !== medId);
+      setMedications(meds);
+      renderMedicationsTable();
+      showToast(`${med.name} removed from regimen`, 'warn');
+      if (currentSelectedMedId === medId) {
+        if (meds.length > 0) openDrawer(meds[0].id);
+        else closeDrawer();
+      }
+    }
+  }
+
+  // Trigger OCR Simulation
+  function triggerOcrScan() {
+    const overlay = document.getElementById('scan-overlay');
+    const laser = document.getElementById('scanner-laser');
+    const statusText = document.getElementById('ocr-status-text');
+    const nameInput = document.getElementById('ocr-med-name');
+    const doseInput = document.getElementById('ocr-dosage');
+    const freqInput = document.getElementById('ocr-frequency');
+    const notice = document.getElementById('ocr-notice-badge');
+
+    if (window.careLoopSound) window.careLoopSound.playPop();
+
+    if (overlay) overlay.style.display = 'flex';
+    if (laser) laser.style.display = 'block';
+    if (statusText) statusText.textContent = 'Analyzing pill bottle label...';
+
+    const simulatedScans = [
+      { name: "Atorvastatin", dosage: "20mg", freq: "Once daily (Bedtime)", notes: "Take at bedtime with water." },
+      { name: "Metformin", dosage: "500mg", freq: "Twice daily", notes: "Take with breakfast and dinner." },
+      { name: "Donepezil", dosage: "10mg", freq: "Once daily (Morning)", notes: "Cognitive support — take consistently at 8:00 AM." },
+      { name: "Amlodipine", dosage: "5mg", freq: "Once daily", notes: "Blood pressure support." }
+    ];
+    const picked = simulatedScans[Math.floor(Math.random() * simulatedScans.length)];
+
+    setTimeout(() => {
+      if (statusText) statusText.textContent = 'Extracting Rx parameters...';
+    }, 700);
+
+    setTimeout(() => {
+      if (statusText) statusText.textContent = 'Label verified ✓';
+      if (nameInput) nameInput.value = picked.name;
+      if (doseInput) doseInput.value = picked.dosage;
+      if (freqInput) freqInput.value = picked.freq;
+      if (notice) {
+        notice.className = 'bg-accent-primary/10 border border-accent-primary/30 rounded-lg p-3 flex items-start gap-2.5';
+        notice.innerHTML = `
+          <span class="material-symbols-outlined text-accent-primary text-[18px] mt-0.5">verified</span>
+          <div class="text-xs text-text-secondary leading-snug">
+            <span class="text-text-primary font-semibold">OCR Success: 99.4% Match.</span> Extracted <strong>${picked.name} ${picked.dosage}</strong> from prescription label.
+          </div>
+        `;
+      }
+      showToast(`Scanned: ${picked.name} ${picked.dosage}`);
+    }, 1400);
+  }
+
+  function resetOcrForm() {
+    document.getElementById('ocr-med-name').value = '';
+    document.getElementById('ocr-dosage').value = '';
+    document.getElementById('ocr-frequency').value = '';
+    document.getElementById('ocr-notes').value = '';
+    showToast('Scanner fields cleared', 'warn');
+  }
+
+  function saveScannedMedication() {
+    const name = document.getElementById('ocr-med-name').value.trim();
+    const dosage = document.getElementById('ocr-dosage').value.trim();
+    const freq = document.getElementById('ocr-frequency').value.trim();
+    const notes = document.getElementById('ocr-notes').value.trim();
+
+    if (!name) {
+      alert('Please enter medication name.');
+      return;
+    }
+
+    const meds = getMedications();
+    const newMed = {
+      id: "med_" + Date.now(),
+      name: name,
+      generic: name.toLowerCase() + " oral",
+      dosage: dosage || "Standard dose",
+      schedule: freq || "Daily",
+      adherence: 100,
+      status: "Active",
+      instructions: notes || "Take as directed by doctor.",
+      type: "tablet"
+    };
+
+    meds.unshift(newMed);
+    setMedications(meds);
+    renderMedicationsTable();
+    openDrawer(newMed.id);
+    showToast(`Pushed ${name} to patient tablet schedule!`);
+  }
+
+  function promptAddTime() {
+    const time = prompt("Enter scheduled reminder time (e.g. 2:00 PM):", "2:00 PM");
+    if (!time) return;
+    const wrap = document.getElementById('ocr-times-wrap');
+    const chip = document.createElement('div');
+    chip.className = "bg-surface-raised border border-border rounded-lg px-3 py-1.5 flex items-center gap-2 text-text-primary font-mono text-xs";
+    chip.innerHTML = `
+      <span class="material-symbols-outlined text-[14px] text-accent-info">schedule</span>
+      <span>${time}</span>
+      <button onclick="this.parentElement.remove()" class="text-text-dim hover:text-accent-danger transition-colors ml-1 cursor-pointer">
+        <span class="material-symbols-outlined text-[14px]">close</span>
+      </button>
+    `;
+    wrap.insertBefore(chip, wrap.lastElementChild);
+    showToast(`Added reminder time: ${time}`);
+  }
+
+  // Manual Add Modal Handlers
+  function openManualAddModal() {
+    if (window.careLoopSound) window.careLoopSound.playPop();
+    const m = document.getElementById('manual-add-modal');
+    if (m) m.classList.remove('hidden');
+    document.getElementById('manual-med-name').focus();
+  }
+
+  function closeManualAddModal() {
+    const m = document.getElementById('manual-add-modal');
+    if (m) m.classList.add('hidden');
+  }
+
+  function saveManualMedication() {
+    const name = document.getElementById('manual-med-name').value.trim();
+    const generic = document.getElementById('manual-med-generic').value.trim();
+    const dosage = document.getElementById('manual-med-dosage').value.trim();
+    const freq = document.getElementById('manual-med-frequency').value;
+    const times = document.getElementById('manual-med-times').value.trim();
+    const instructions = document.getElementById('manual-med-instructions').value.trim();
+
+    if (!name) {
+      alert('Please enter medication name.');
+      return;
+    }
+
+    const meds = getMedications();
+    const newMed = {
+      id: "med_" + Date.now(),
+      name: name,
+      generic: generic || (name.toLowerCase() + " generic"),
+      dosage: dosage || "10mg",
+      schedule: `${freq} · ${times || '8:00 AM'}`,
+      adherence: 100,
+      status: "Active",
+      instructions: instructions || "Take with water.",
+      type: "tablet"
+    };
+
+    meds.unshift(newMed);
+    setMedications(meds);
+    renderMedicationsTable();
+    openDrawer(newMed.id);
+    closeManualAddModal();
+    showToast(`Saved and pushed ${name} to patient companion!`);
+
+    // Reset inputs
+    document.getElementById('manual-med-name').value = '';
+    document.getElementById('manual-med-generic').value = '';
+    document.getElementById('manual-med-dosage').value = '';
+  }
+
+  function toggleConfirmationRequirement(btn) {
+    const dot = btn.firstElementChild;
+    const isRight = dot.classList.contains('right-0.5');
+    if (isRight) {
+      dot.classList.remove('right-0.5');
+      dot.classList.add('left-0.5');
+      btn.classList.remove('bg-accent-primary/20', 'border-accent-primary/30');
+      btn.classList.add('bg-surface-raised', 'border-border');
+      dot.classList.remove('bg-accent-primary');
+      dot.classList.add('bg-text-dim');
+      showToast('Patient confirmation optional');
+    } else {
+      dot.classList.remove('left-0.5');
+      dot.classList.add('right-0.5');
+      btn.classList.add('bg-accent-primary/20', 'border-accent-primary/30');
+      btn.classList.remove('bg-surface-raised', 'border-border');
+      dot.classList.add('bg-accent-primary');
+      dot.classList.remove('bg-text-dim');
+      showToast('Patient confirmation required');
+    }
+  }
+
+  // Cross-frame messaging and language
+  async function applyLanguage(code) {
+    if (!window.careLoopApi) return;
+    try {
+      const data = await window.careLoopApi.getTranslations(code);
+      const t = data.translations || {};
+      const title = document.querySelector('header h1');
+      if (title && t.medication) {
+        title.innerHTML = `${t.medication} <span class="text-xs font-mono px-2 py-0.5 rounded bg-accent-primary/10 text-accent-primary border border-accent-primary/20" id="header-patient-name">${localStorage.getItem('careloop_patient_name') || 'Kamala Sharma'}</span>`;
+      }
+    } catch(e) {}
+  }
+
+  window.addEventListener('message', (e) => {
+    if (!e.data) return;
+    if (e.data.type === 'themeChange') {
+      if (e.data.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+      } else {
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.add('dark');
+      }
+    }
+    if (e.data.type === 'languageChange' && e.data.code) {
+      applyLanguage(e.data.code);
+    }
+    if (e.data.type === 'patientUpdated') {
+      syncPatientName();
+    }
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'careloop_patient_name') {
+      syncPatientName();
+    }
+    if (e.key === 'careloop_medications') {
+      renderMedicationsTable();
+    }
+  });
+
+  // Init
+  const savedTheme = localStorage.getItem('careloop_theme') || 'dark';
+  if (savedTheme === 'light') {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    syncPatientName();
+    renderMedicationsTable();
+    openDrawer('med_2');
+    const activeLang = localStorage.getItem('careloop_lang') || 'en';
+    applyLanguage(activeLang);
+  });
+</script>
+
+</body></html>

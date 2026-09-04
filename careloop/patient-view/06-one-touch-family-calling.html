@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>CareLoop — Family Calling</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="../shared/voiceManager.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/translations.js"></script>
+  <script src="../shared/api.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #FFFFFF;
+      color: #12201A;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Hide scrollbars while preserving scroll */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+    html, body { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .contact-card {
+      border: 1px solid #E2E8F0;
+      background: #FFFFFF;
+      border-radius: 24px;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+      cursor: pointer;
+    }
+    .contact-card:hover {
+      background: #F8FAFC;
+      border-color: #3B82F6;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.12);
+    }
+    .contact-card:active {
+      transform: scale(0.96);
+    }
+
+    .emergency-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #EF4444;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+    }
+
+    .pulse-ring {
+      animation: pulseRing 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 0.3; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="p-5 pb-24 overflow-y-auto no-scrollbar max-w-[412px] mx-auto w-full flex flex-col justify-between relative">
+
+  <!-- TOP HEADER -->
+  <header class="pt-2 pb-3 flex items-center justify-between border-b border-slate-200/80">
+    <div class="flex items-center gap-3">
+      <button onclick="goBackHome()" class="w-10 h-10 rounded-full bg-[#F4F7F5] flex items-center justify-center text-slate-800 active:scale-95 transition-transform" title="Back to home">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900" id="lbl-calling-header">Family & Care</h1>
+        <p class="text-xs text-slate-500 font-medium" id="lbl-calling-subheader">Tap any photo to make a call</p>
+      </div>
+    </div>
+
+    <!-- Quick Status Pill -->
+    <div class="bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-blue-200">
+      <span class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
+      Online
+    </div>
+  </header>
+
+  <!-- CONTACTS GRID (4 Big Friendly Cards) -->
+  <main class="flex-1 my-4">
+    <div class="grid grid-cols-2 gap-3.5" id="contacts-grid">
+      <!-- Populated dynamically via JS to guarantee accuracy -->
+    </div>
+  </main>
+
+  <!-- EMERGENCY 1-TAP ROW -->
+  <footer class="pt-2 pb-4">
+    <div class="bg-[#FFF1F1] border border-[#FCD4D4] rounded-2xl p-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-full bg-[#D64545] flex items-center justify-center text-white shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-bold text-[#961F1F]">Need Urgent Help?</div>
+          <div class="text-xs text-[#BA4A4A]">Calls Priya immediately</div>
+        </div>
+      </div>
+      <button onclick="startCall('contact_priya')" class="bg-[#D64545] hover:bg-[#B73434] active:scale-95 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow transition-all">
+        Call Now
+      </button>
+    </div>
+  </footer>
+
+  <!-- DYNAMIC ACTIVE CALL OVERLAY -->
+  <div id="call-overlay" class="fixed inset-0 bg-white z-50 flex flex-col justify-between p-6 transition-all duration-300 opacity-0 pointer-events-none translate-y-6">
+    
+    <!-- Call Top Status -->
+    <div class="text-center pt-8">
+      <span class="text-xs font-semibold tracking-wider uppercase text-[#6B8C7A] bg-[#F4F7F5] px-3 py-1 rounded-full" id="call-state-pill">
+        Calling...
+      </span>
+      <h2 class="text-2xl font-bold text-[#12201A] mt-3" id="active-call-name">Priya Sharma</h2>
+      <p class="text-sm text-[#527863] font-medium" id="active-call-relation">Daughter</p>
+      <p class="text-xs text-[#8A9E93] mt-1 font-mono" id="active-call-phone">+91 98765 43210</p>
+    </div>
+
+    <!-- Central Pulsing Avatar -->
+    <div class="flex flex-col items-center justify-center my-6">
+      <div class="relative w-44 h-44 flex items-center justify-center">
+        <div class="absolute inset-0 rounded-full bg-blue-500/20 pulse-ring"></div>
+        <div class="absolute inset-2 rounded-full bg-blue-500/30 pulse-ring" style="animation-delay: 0.4s;"></div>
+        
+        <div class="w-36 h-36 rounded-full overflow-hidden border-4 border-white shadow-2xl relative z-10 bg-slate-50">
+          <img id="active-call-avatar" src="" alt="Contact" class="w-full h-full object-cover"/>
+        </div>
+      </div>
+
+      <!-- Live Call Duration Timer -->
+      <div class="mt-5 text-xl font-bold tracking-widest text-blue-600" id="call-timer">
+        Ringing...
+      </div>
+    </div>
+
+    <!-- Call Control Actions -->
+    <div class="flex flex-col items-center gap-5 pb-6">
+      
+      <!-- Native Dialer Fallback Link -->
+      <a id="native-dial-link" href="#" class="text-xs text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-full flex items-center gap-1.5 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+        <span>Open in Mobile Phone Dialer</span>
+      </a>
+
+      <!-- In-App Audio Controls -->
+      <div class="flex items-center gap-6">
+        <!-- Mute Button -->
+        <button onclick="toggleMute()" id="mute-btn" class="w-14 h-14 rounded-full bg-[#F4F7F5] border border-[#DCE5E0] flex items-center justify-center text-[#12201A] active:scale-95 transition-all" title="Mute microphone">
+          <span class="material-symbols-outlined text-2xl">mic</span>
+        </button>
+
+        <!-- Big Red Hangup Button -->
+        <button onclick="endCall()" class="w-20 h-20 rounded-full bg-[#D64545] hover:bg-[#B73434] active:scale-90 flex items-center justify-center text-white shadow-xl transition-all" title="End call">
+          <span class="material-symbols-outlined text-4xl">call_end</span>
+        </button>
+
+        <!-- Speaker Button -->
+        <button onclick="toggleSpeaker()" id="speaker-btn" class="w-14 h-14 rounded-full bg-[#F4F7F5] border border-[#DCE5E0] flex items-center justify-center text-[#12201A] active:scale-95 transition-all" title="Speakerphone">
+          <span class="material-symbols-outlined text-2xl">volume_up</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 4 Distinct Contacts accurately mapped
+    const CONTACTS = [
+      {
+        id: 'contact_priya',
+        name: 'Priya Sharma',
+        relation: 'Daughter',
+        sublabel: 'Primary Caregiver',
+        phone: '+91 98765 43210',
+        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+        isEmergency: true
+      },
+      {
+        id: 'contact_bose',
+        name: 'Dr. Ravi Bose',
+        relation: 'Doctor',
+        sublabel: 'Attending Physician',
+        phone: '+91 11 2345 6789',
+        avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&auto=format&fit=crop&q=80',
+        isEmergency: false
+      },
+      {
+        id: 'contact_ramesh',
+        name: 'Ramesh Sharma',
+        relation: 'Son',
+        sublabel: 'Family',
+        phone: '+91 98111 22334',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+        isEmergency: false
+      },
+      {
+        id: 'contact_meena',
+        name: 'Meena Devi',
+        relation: 'Sister',
+        sublabel: 'Family',
+        phone: '+91 98450 99887',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+        isEmergency: false
+      }
+    ];
+
+    let activeContact = null;
+    let callDurationSec = 0;
+    let callTimerInterval = null;
+    let connectTimeout = null;
+    let isMuted = false;
+    let isSpeaker = true;
+
+    function syncEmergencyContact() {
+      const emName = localStorage.getItem('careloop_emergency_contact') || 'Priya Sharma';
+      const emPhone = localStorage.getItem('careloop_emergency_phone') || '+91 98765 43210';
+      CONTACTS[0].name = emName;
+      CONTACTS[0].phone = emPhone;
+      const firstName = emName.trim().split(' ')[0];
+      const urgentDesc = document.querySelector('footer .text-xs');
+      if (urgentDesc) urgentDesc.textContent = `Calls ${firstName} immediately`;
+    }
+
+    function renderContacts() {
+      syncEmergencyContact();
+      const grid = document.getElementById('contacts-grid');
+      grid.innerHTML = '';
+
+      const activeLang = (typeof localStorage !== 'undefined' && (localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang'))) || 'en';
+      const t = (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS[activeLang])
+        || (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS['en'])
+        || {};
+
+      CONTACTS.forEach(contact => {
+        const card = document.createElement('div');
+        card.className = `contact-card ${contact.isEmergency ? 'border-[#FCD4D4] bg-[#FFFBFB]' : ''}`;
+        card.onclick = () => startCall(contact.id);
+
+        let relText = contact.relation;
+        const relLower = (contact.relation || '').toLowerCase();
+        if (t[relLower]) relText = t[relLower];
+
+        let subText = contact.sublabel;
+        if (contact.isEmergency && t.primaryCaregiver) {
+          subText = t.primaryCaregiver;
+        } else if (t.family && contact.sublabel === 'Family') {
+          subText = t.family;
+        }
+
+        let emergencyBadge = '';
+        if (contact.isEmergency) {
+          const badgeText = t.emergencyContact ? t.emergencyContact.toUpperCase() : 'EMERGENCY';
+          emergencyBadge = `<div class="emergency-badge">${badgeText}</div>`;
+        }
+
+        card.innerHTML = `
+          ${emergencyBadge}
+          <div class="w-24 h-24 rounded-full overflow-hidden mb-2.5 shadow-sm border-2 ${contact.isEmergency ? 'border-red-500' : 'border-blue-500'} bg-white">
+            <img src="${contact.avatar}" alt="${contact.name}" class="w-full h-full object-cover"/>
+          </div>
+          <h2 class="text-base font-bold text-slate-900 text-center leading-tight mb-0.5">${contact.name}</h2>
+          <p class="text-xs ${contact.isEmergency ? 'text-red-600' : 'text-blue-600'} font-semibold">${relText}</p>
+          <p class="text-[11px] text-slate-500 mt-0.5">${subText}</p>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    // Start Call specifically to the clicked contact
+    function startCall(contactId) {
+      const contact = CONTACTS.find(c => c.id === contactId);
+      if (!contact) return;
+
+      activeContact = contact;
+      callDurationSec = 0;
+
+      // Populate Overlay with EXACT contact details
+      document.getElementById('active-call-name').textContent = contact.name;
+      document.getElementById('active-call-relation').textContent = contact.relation + ' (' + contact.sublabel + ')';
+      document.getElementById('active-call-phone').textContent = contact.phone;
+      document.getElementById('active-call-avatar').src = contact.avatar;
+      document.getElementById('native-dial-link').href = 'tel:' + contact.phone.replace(/[^0-9+]/g, '');
+      document.getElementById('call-timer').textContent = 'Ringing...';
+      document.getElementById('call-state-pill').textContent = 'Calling ' + contact.relation;
+      document.getElementById('call-state-pill').className = 'text-xs font-semibold tracking-wider uppercase text-[#6B8C7A] bg-[#F4F7F5] px-3 py-1 rounded-full';
+
+      // Open Overlay with animation
+      const overlay = document.getElementById('call-overlay');
+      overlay.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-6');
+
+      // Start realistic procedural ringing sound
+      if (window.careLoopSound) {
+        window.careLoopSound.startRinging();
+      }
+
+      // Log call initiate to backend
+      if (window.careLoopApi) {
+        window.careLoopApi.initiateCall(contact.id);
+      }
+
+      // Simulate connection after 2.8 seconds
+      connectTimeout = setTimeout(() => {
+        if (window.careLoopSound) window.careLoopSound.stopRinging();
+
+        document.getElementById('call-state-pill').textContent = 'Connected';
+        document.getElementById('call-state-pill').className = 'text-xs font-semibold tracking-wider uppercase text-white bg-[#2E9E63] px-3 py-1 rounded-full';
+
+        callTimerInterval = setInterval(() => {
+          callDurationSec++;
+          const mins = String(Math.floor(callDurationSec / 60)).padStart(2, '0');
+          const secs = String(callDurationSec % 60).padStart(2, '0');
+          document.getElementById('call-timer').textContent = `${mins}:${secs}`;
+        }, 1000);
+      }, 2800);
+    }
+
+    function endCall() {
+      // Clear timeouts & timers
+      if (connectTimeout) clearTimeout(connectTimeout);
+      if (callTimerInterval) clearInterval(callTimerInterval);
+
+      // Play soft hangup sound
+      if (window.careLoopSound) {
+        window.careLoopSound.stopRinging();
+        window.careLoopSound.playHangup();
+      }
+
+      // Log to backend
+      if (window.careLoopApi && activeContact) {
+        window.careLoopApi.endCall(activeContact.id, callDurationSec);
+      }
+
+      // Close Overlay
+      const overlay = document.getElementById('call-overlay');
+      overlay.classList.add('opacity-0', 'pointer-events-none', 'translate-y-6');
+
+      activeContact = null;
+      callDurationSec = 0;
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      const btn = document.getElementById('mute-btn');
+      if (isMuted) {
+        btn.classList.add('bg-[#FEE8E8]', 'text-[#D64545]', 'border-[#D64545]');
+      } else {
+        btn.classList.remove('bg-[#FEE8E8]', 'text-[#D64545]', 'border-[#D64545]');
+      }
+      if (window.careLoopSound) window.careLoopSound.playClick();
+    }
+
+    function toggleSpeaker() {
+      isSpeaker = !isSpeaker;
+      const btn = document.getElementById('speaker-btn');
+      if (isSpeaker) {
+        btn.classList.add('bg-[#EAF5EF]', 'text-[#2E9E63]', 'border-[#2E9E63]');
+      } else {
+        btn.classList.remove('bg-[#EAF5EF]', 'text-[#2E9E63]', 'border-[#2E9E63]');
+      }
+      if (window.careLoopSound) window.careLoopSound.playClick();
+    }
+
+    function goBackHome() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      window.parent.postMessage({
+        type: 'navigate',
+        route: { role: 'patient', file: '01-patient-home.html', id: '01' }
+      }, '*');
+    }
+
+    window.addEventListener('beforeunload', () => {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+    });
+
+    function applyLanguage(code) {
+      const activeCode = code || (typeof localStorage !== 'undefined' && (localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang'))) || 'en';
+      if (typeof window.applyTranslationsToDOM === 'function') {
+        window.applyTranslationsToDOM(activeCode);
+      }
+      const t = (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS[activeCode])
+        || (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS['en'])
+        || {};
+
+      if (t.familyCallingTitle && document.getElementById('lbl-calling-header')) {
+        document.getElementById('lbl-calling-header').textContent = t.familyCallingTitle;
+      }
+      if (t.familyCallingSubtitle && document.getElementById('lbl-calling-subheader')) {
+        document.getElementById('lbl-calling-subheader').textContent = t.familyCallingSubtitle;
+      }
+      renderContacts();
+    }
+
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'languageChange' && e.data.code) {
+        applyLanguage(e.data.code);
+      }
+      if (e.data && e.data.type === 'patientUpdated') {
+        renderContacts();
+      }
+    });
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'careloop_emergency_contact' || e.key === 'careloop_emergency_phone') {
+        renderContacts();
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderContacts();
+      const urlParams = new URLSearchParams(window.location.search);
+      const callContactId = urlParams.get('call');
+      if (callContactId) {
+        setTimeout(() => {
+          startCall(callContactId);
+        }, 300);
+      }
+      const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
+      applyLanguage(activeLang);
+    });
+  </script>
+</body>
+</html>

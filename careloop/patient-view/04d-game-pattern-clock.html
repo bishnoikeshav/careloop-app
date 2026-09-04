@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>CareLoop — Pattern Clock</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="../shared/voiceManager.js"></script>
+  <script src="../shared/gameState.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/api.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #FFFFFF;
+      color: #12201A;
+      user-select: none;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .clock-face {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      border: 6px solid #2E9E63;
+      background: #FAFCFA;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(46, 158, 99, 0.15);
+      margin: 0 auto;
+    }
+    .clock-center {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #12201A;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+    .hand {
+      position: absolute;
+      bottom: 50%;
+      left: 50%;
+      transform-origin: 50% 100%;
+      border-radius: 6px;
+      transition: transform 0.5s cubic-bezier(0.4, 2, 0.55, 0.44);
+    }
+    .hour-hand {
+      width: 6px;
+      height: 52px;
+      background: #12201A;
+      margin-left: -3px;
+    }
+    .minute-hand {
+      width: 4px;
+      height: 78px;
+      background: #2E9E63;
+      margin-left: -2px;
+    }
+    .clock-num {
+      position: absolute;
+      font-size: 15px;
+      font-weight: 700;
+      color: #2D4A3A;
+      width: 24px;
+      height: 24px;
+      text-align: center;
+      line-height: 24px;
+      margin: -12px 0 0 -12px;
+    }
+
+    .time-choice-btn {
+      min-height: 60px;
+      border-radius: 18px;
+      font-size: 20px;
+      font-weight: 700;
+      border: 2px solid #E3ECE7;
+      background: #F8FAF9;
+      color: #12201A;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .time-choice-btn:hover {
+      background: #EAF1ED;
+      border-color: #2E9E63;
+      transform: translateY(-2px);
+    }
+    .time-choice-btn:active {
+      transform: scale(0.96);
+    }
+    .time-choice-btn.correct {
+      background: #2E9E63 !important;
+      border-color: #2E9E63 !important;
+      color: #FFF !important;
+      transform: scale(1.03);
+      box-shadow: 0 6px 20px rgba(46, 158, 99, 0.35);
+    }
+    .time-choice-btn.incorrect {
+      background: #FEE8E8 !important;
+      border-color: #D64545 !important;
+      color: #D64545 !important;
+      animation: shake 0.4s ease;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+  </style>
+</head>
+<body class="p-5 pb-24 overflow-y-auto max-w-[412px] mx-auto w-full flex flex-col justify-between">
+
+  <!-- TOP BAR -->
+  <header class="flex items-center justify-between pb-3 pt-1 border-b border-[#E8EFEA]">
+    <div class="flex items-center gap-3">
+      <button onclick="goBack()" class="w-10 h-10 rounded-full bg-[#F4F7F5] flex items-center justify-center text-[#12201A] active:scale-95 transition-transform" title="Back to games">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-[#12201A]">Pattern Clock</h1>
+        <p class="text-xs text-[#527863] font-medium">Temporal & time orientation</p>
+      </div>
+    </div>
+
+    <!-- Round Dots -->
+    <div class="flex items-center gap-1.5" id="round-dots"></div>
+  </header>
+
+  <!-- CLOCK DISPLAY -->
+  <main class="flex-1 flex flex-col items-center justify-center my-3 text-center">
+
+    <!-- Analog Clock -->
+    <div class="clock-face mb-4" id="clock">
+      <div class="clock-center"></div>
+      <div class="hand hour-hand" id="hour-hand"></div>
+      <div class="hand minute-hand" id="minute-hand"></div>
+
+      <!-- 12 numbers positioned in a circle -->
+      <div class="clock-num" style="top: 12%; left: 50%;">12</div>
+      <div class="clock-num" style="top: 22%; left: 77%;">1</div>
+      <div class="clock-num" style="top: 38%; left: 91%;">2</div>
+      <div class="clock-num" style="top: 50%; left: 95%;">3</div>
+      <div class="clock-num" style="top: 67%; left: 90%;">4</div>
+      <div class="clock-num" style="top: 81%; left: 77%;">5</div>
+      <div class="clock-num" style="top: 88%; left: 50%;">6</div>
+      <div class="clock-num" style="top: 81%; left: 23%;">7</div>
+      <div class="clock-num" style="top: 67%; left: 10%;">8</div>
+      <div class="clock-num" style="top: 50%; left: 5%;">9</div>
+      <div class="clock-num" style="top: 38%; left: 9%;">10</div>
+      <div class="clock-num" style="top: 22%; left: 23%;">11</div>
+    </div>
+
+    <h2 class="text-xl font-bold text-[#12201A] mb-1">What time does this clock show?</h2>
+    <p class="text-xs text-[#6B8C7A] mb-4 font-medium" id="hint-text">Select the correct matching time</p>
+
+    <!-- 4 TIME BUTTONS -->
+    <div class="grid grid-cols-2 gap-3 w-full max-w-sm" id="choices-container">
+      <!-- Generated via JS -->
+    </div>
+  </main>
+
+  <!-- BOTTOM HINT -->
+  <footer class="text-center py-2">
+    <p class="text-xs text-[#6B8C7A] font-medium">
+      Strengthens daily routine awareness and time recognition
+    </p>
+  </footer>
+
+  <!-- COMPLETION MODAL -->
+  <div id="celebration-overlay" class="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div class="w-20 h-20 bg-[#2E9E63] rounded-full flex items-center justify-center text-white mb-5 shadow-lg">
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+    </div>
+
+    <h2 class="text-3xl font-bold text-[#12201A] mb-2 tracking-tight">Time Well Spent!</h2>
+    <p class="text-base text-[#527863] max-w-xs mb-6 leading-relaxed">
+      You correctly recognized the clock times. Maintaining daily temporal awareness is key to peaceful cognitive health.
+    </p>
+
+    <div class="bg-[#F4F7F5] border border-[#DCE5E0] rounded-2xl p-4 w-full max-w-xs mb-6 flex justify-around">
+      <div>
+        <div class="text-2xl font-bold text-[#2E9E63]" id="summary-score">4/4</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-semibold">Score</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-bold text-[#12201A]" id="summary-time">22s</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-semibold">Time</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-bold text-[#2E9E63]" id="summary-cas">96</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-semibold">CAS Score</div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 w-full max-w-xs">
+      <button onclick="startSession()" class="w-full h-14 bg-[#2E9E63] hover:bg-[#258552] text-white rounded-2xl font-semibold text-lg shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+        <span>Play Again</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+      <button onclick="goBack()" class="w-full h-12 bg-[#F4F7F5] hover:bg-[#EAF1ED] text-[#12201A] border border-[#DCE5E0] rounded-2xl font-medium text-base transition-all active:scale-[0.98]">
+        Back to Games Hub
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 4 standard clock times
+    const CLOCK_LEVELS = [
+      { hours: 3, minutes: 0, label: '3:00', distractors: ['12:15', '4:00', '2:30'] },
+      { hours: 8, minutes: 0, label: '8:00', distractors: ['7:00', '8:30', '12:40'] },
+      { hours: 10, minutes: 30, label: '10:30', distractors: ['11:30', '9:30', '6:50'] },
+      { hours: 1, minutes: 0, label: '1:00', distractors: ['12:05', '2:00', '11:00'] }
+    ];
+
+    let currentRound = 0;
+    let correctCount = 0;
+    let isAnswering = false;
+    let startTime = null;
+
+    function startSession() {
+      currentRound = 0;
+      correctCount = 0;
+      isAnswering = false;
+      startTime = Date.now();
+
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+
+      renderRoundDots();
+      loadRound(0);
+    }
+
+    function renderRoundDots() {
+      const c = document.getElementById('round-dots');
+      c.innerHTML = '';
+      for (let i = 0; i < CLOCK_LEVELS.length; i++) {
+        const dot = document.createElement('div');
+        dot.className = `w-2 h-2 rounded-full transition-all duration-300 ${i < currentRound ? 'bg-[#2E9E63]' : i === currentRound ? 'bg-[#2E9E63] scale-125' : 'bg-[#DCE5E0]'}`;
+        c.appendChild(dot);
+      }
+    }
+
+    function loadRound(idx) {
+      if (idx >= CLOCK_LEVELS.length) {
+        handleVictory();
+        return;
+      }
+
+      currentRound = idx;
+      renderRoundDots();
+      isAnswering = false;
+
+      const level = CLOCK_LEVELS[idx];
+      setClockHands(level.hours, level.minutes);
+
+      // 4 choices
+      const options = [level.label, ...level.distractors].sort(() => Math.random() - 0.5);
+      const container = document.getElementById('choices-container');
+      container.innerHTML = '';
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'time-choice-btn';
+        btn.textContent = opt;
+        btn.onclick = () => handleChoice(opt, level.label, btn);
+        container.appendChild(btn);
+      });
+
+      document.getElementById('hint-text').textContent = 'Select the correct matching time';
+    }
+
+    function setClockHands(hours, minutes) {
+      const hourDeg = (hours % 12) * 30 + (minutes * 0.5);
+      const minDeg = minutes * 6;
+
+      document.getElementById('hour-hand').style.transform = `rotate(${hourDeg}deg)`;
+      document.getElementById('minute-hand').style.transform = `rotate(${minDeg}deg)`;
+    }
+
+    function handleChoice(chosen, correct, btn) {
+      if (isAnswering) return;
+      isAnswering = true;
+
+      const allBtns = document.querySelectorAll('.time-choice-btn');
+      allBtns.forEach(b => b.disabled = true);
+
+      if (chosen === correct) {
+        correctCount++;
+        btn.classList.add('correct');
+        if (window.careLoopSound) window.careLoopSound.playMatch();
+        document.getElementById('hint-text').textContent = `Correct! It is ${correct}.`;
+
+        setTimeout(() => loadRound(currentRound + 1), 1200);
+      } else {
+        btn.classList.add('incorrect');
+        if (window.careLoopSound) window.careLoopSound.playMismatch();
+
+        allBtns.forEach(b => {
+          if (b.textContent === correct) b.classList.add('correct');
+        });
+        document.getElementById('hint-text').textContent = `The clock shows ${correct}.`;
+
+        setTimeout(() => loadRound(currentRound + 1), 1800);
+      }
+    }
+
+    function handleVictory() {
+      const elapsedSec = Math.max(10, Math.round((Date.now() - startTime) / 1000));
+      const accuracy = Math.round((correctCount / CLOCK_LEVELS.length) * 100);
+      const casScore = Math.min(99, Math.round((accuracy * 0.7) + (Math.max(10, 100 - elapsedSec) * 0.3)));
+
+      document.getElementById('summary-score').textContent = `${correctCount}/${CLOCK_LEVELS.length}`;
+      document.getElementById('summary-time').textContent = elapsedSec + 's';
+      document.getElementById('summary-cas').textContent = casScore;
+
+      if (window.careLoopSound) {
+        setTimeout(() => window.careLoopSound.playMatch(), 200);
+      }
+
+      if (window.careLoopApi) {
+        window.careLoopApi.recordGame({
+          gameType: 'pattern-clock',
+          gameTitle: 'Pattern Clock',
+          accuracy,
+          durationSec: elapsedSec,
+          moves: CLOCK_LEVELS.length
+        });
+      }
+
+      if (window.CareLoopGameState) {
+        window.CareLoopGameState.addResult({
+          gameName: 'Pattern Clock',
+          gameType: 'pattern-clock',
+          score: accuracy,
+          durationSec: elapsedSec,
+          moves: CLOCK_LEVELS.length
+        });
+      }
+
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function goBack() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      window.location.href = '03-cognitive-games-hub.html';
+      window.parent.postMessage({
+        type: 'navigate',
+        route: { role: 'patient', file: '03-cognitive-games-hub.html', id: '03' }
+      }, '*');
+    }
+
+    window.addEventListener('beforeunload', () => {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+    });
+
+    window.addEventListener('DOMContentLoaded', startSession);
+  </script>
+</body>
+</html>

@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>CareLoop — Patient Home</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fonts & Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <!-- React 18, ReactDOM 18, Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Shared Services & Translations -->
+  <script src="../shared/translations.js"></script>
+  <script src="../shared/LanguageContext.js"></script>
+  <script src="../shared/voiceManager.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/api.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      background: linear-gradient(to bottom, #eff6ff, #dbeafe);
+      color: #1e293b;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* Hide scrollbars while preserving scroll */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+    html, body { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .home-container {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 20px 16px 120px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .action-tile {
+      border-radius: 24px;
+      padding: 20px 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      background: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.06), 0 8px 10px -6px rgba(30, 58, 138, 0.04);
+      position: relative;
+      overflow: hidden;
+    }
+    .action-tile:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px -4px rgba(59, 130, 246, 0.16);
+      border-color: #93C5FD;
+    }
+    .action-tile:active {
+      transform: scale(0.97);
+    }
+
+    .tile-games { border-color: #BFDBFE; }
+    .tile-calling { border-color: #BFDBFE; }
+    .tile-meds { border-color: #FED7AA; }
+    .tile-vault { border-color: #DDD6FE; }
+
+    .mic-pulse-ring {
+      animation: micPulse 2s infinite;
+    }
+    @keyframes micPulse {
+      0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+      70% { box-shadow: 0 0 0 18px rgba(59, 130, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-modal {
+      animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="home-container">
+
+    <!-- WARM GREETING & HEADER (Profile Avatar with Language Switcher in Modal) -->
+    <header class="flex items-center justify-between pt-1">
+      <div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold mb-1 border border-blue-200 shadow-xs">
+          <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+          CareLoop Companion
+        </div>
+        <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight" id="greeting-text">Good Morning, Keshav</h1>
+        <p class="text-xs text-slate-500 font-medium" id="date-display">Thursday, 4 September 2026</p>
+      </div>
+
+      <!-- React Profile Avatar Mount Point -->
+      <div id="header-profile-root">
+        <button id="header-profile-btn" onclick="window.triggerOpenAuth && window.triggerOpenAuth()" class="w-12 h-12 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center font-bold text-lg shadow-sm border border-blue-200 cursor-pointer transition-all active:scale-95" title="User Profile / Language Switcher">
+          <span id="header-profile-initial">K</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- LIVE CLOCK CARD (Calm Cloud Blue Theme) -->
+    <section class="bg-white rounded-3xl p-6 border border-white/60 shadow-lg shadow-blue-900/5 text-center relative overflow-hidden">
+      <div class="text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-1" id="lbl-current-time">CURRENT TIME</div>
+      
+      <!-- Big Digital Clock -->
+      <div class="text-5xl font-extrabold tracking-tight text-slate-800 font-mono" id="clock-display">
+        08:42 <span class="text-2xl font-sans font-bold text-slate-500">AM</span>
+      </div>
+      
+      <p class="text-xs text-slate-500 mt-2 font-medium" id="sub-time-greeting">
+        A calm morning. Your daily routine is going smoothly.
+      </p>
+
+      <!-- Routine Progress Bar with Minimalist Vector Icons -->
+      <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-around text-xs">
+        <div class="flex items-center gap-1.5 text-blue-600 font-semibold">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          <span id="lbl-morning-meds">Morning Meds</span>
+        </div>
+        <div class="w-px h-4 bg-slate-200"></div>
+        <div class="flex items-center gap-1.5 text-blue-600 font-semibold">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          <span id="lbl-game-played">1 Game Played</span>
+        </div>
+        <div class="w-px h-4 bg-slate-200"></div>
+        <div class="flex items-center gap-1.5 text-slate-500 font-medium">
+          <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"/></svg>
+          <span id="lbl-evening-dose">Evening Dose 8PM</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- BILINGUAL AI VOICE ASSISTANT BANNER CARD (Cerulean Sky Blue Gradient) -->
+    <section onclick="navTo('07-voice-assistant-overlay.html', '07')" class="bg-gradient-to-r from-blue-600 to-blue-500 rounded-3xl p-5 text-white shadow-lg shadow-blue-500/20 cursor-pointer active:scale-[0.98] transition-all relative overflow-hidden">
+      <div class="flex items-center justify-between relative z-10">
+        <div class="flex-1 pr-3">
+          <h2 class="text-xl font-bold tracking-tight" id="lbl-voice-title">Need anything? Just Ask.</h2>
+          <p class="text-xs text-white/90 mt-1" id="lbl-voice-sub">Tap here to speak or ask when your next medicine is due.</p>
+        </div>
+
+        <!-- Glowing Mic Orb with Minimalist Vector Icon -->
+        <div class="w-14 h-14 rounded-full bg-white text-blue-600 flex items-center justify-center shadow-md mic-pulse-ring shrink-0">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 MAIN INTERACTIVE TILES -->
+    <section class="flex flex-col gap-3">
+
+      <!-- TILE 1: BRAIN GAMES -->
+      <div onclick="navTo('03-cognitive-games-hub.html', '03')" class="action-tile tile-games">
+        <div class="w-16 h-16 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-md shrink-0">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-slate-800" id="lbl-games-title">Brain Games</h2>
+            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">7 Games</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Memory Match, Family Faces, Sequence & Clock</p>
+          <div class="text-[11px] text-blue-600 font-semibold mt-1 flex items-center gap-1">
+            <span id="lbl-games-play">Play today's exercise</span> →
+          </div>
+        </div>
+      </div>
+
+      <!-- TILE 2: FAMILY & CALLING -->
+      <div onclick="navTo('06-one-touch-family-calling.html', '06')" class="action-tile tile-calling">
+        <div class="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-slate-800" id="lbl-calling-title">Family Calling</h2>
+            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">1-Touch</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Call Daughter Priya, Dr. Bose, or Ramesh</p>
+          <div class="text-[11px] text-blue-600 font-semibold mt-1 flex items-center gap-1">
+            <span id="lbl-calling-play">Tap photo to call</span> →
+          </div>
+        </div>
+      </div>
+
+      <!-- TILE 3: MEDICATIONS & ROUTINE -->
+      <div onclick="navTo('02-medication-reminder.html', '02')" class="action-tile tile-meds">
+        <div class="w-16 h-16 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shrink-0">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-slate-800" id="lbl-meds-title">Medication</h2>
+            <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">Next: 8:00 PM</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Lisinopril 10mg (Evening dose with water)</p>
+          <div class="text-[11px] text-amber-600 font-semibold mt-1 flex items-center gap-1">
+            <span id="lbl-meds-play">View prescription card</span> →
+          </div>
+        </div>
+      </div>
+
+      <!-- TILE 4: FAMILY MEMORY PHOTO VAULT -->
+      <div onclick="navTo('05-family-memory-carousel.html', '05')" class="action-tile tile-vault">
+        <div class="w-16 h-16 rounded-2xl bg-indigo-500 text-white flex items-center justify-center shadow-md shrink-0">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15l-5-5L5 21"/></svg>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-slate-800" id="lbl-vault-title">Family Photos</h2>
+            <span class="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">Album</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Cherished photos of children & family trips</p>
+          <div class="text-[11px] text-indigo-600 font-semibold mt-1 flex items-center gap-1">
+            <span id="lbl-vault-play">Browse memories</span> →
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- URGENT EMERGENCY CALL BANNER -->
+    <section class="bg-rose-50 border border-rose-200 rounded-3xl p-4 flex items-center justify-between mt-1 shadow-xs">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-rose-900">Emergency Help</h3>
+          <p class="text-xs text-rose-600" id="emergency-sub-text">Direct 1-tap call to Priya Sharma</p>
+        </div>
+      </div>
+
+      <button onclick="navTo('06-one-touch-family-calling.html', '06')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow active:scale-95 transition-all">
+        Call Now
+      </button>
+    </section>
+
+  </div>
+
+  <!-- React Auth Modal Root Container -->
+  <div id="auth-modal-root"></div>
+
+  <!-- Standard Home Screen Clock & Voice Navigation Script -->
+  <script>
+    const CORE_TRANSLATIONS = {
+      en: {
+        home: "Home",
+        games: "Games",
+        family: "Family",
+        meds: "Meds",
+        voiceAi: "Voice AI",
+        morning: "Good Morning",
+        afternoon: "Good Afternoon",
+        evening: "Good Evening",
+        night: "Good Night",
+        langSectionTitle: "App Language / भाषा"
+      },
+      hi: {
+        home: "मुख्य पृष्ठ",
+        games: "खेल",
+        family: "परिवार",
+        meds: "दवाइयां",
+        voiceAi: "आवाज़",
+        morning: "शुभ प्रभात",
+        afternoon: "शुभ दोपहर",
+        evening: "शुभ संध्या",
+        night: "शुभ रात्रि",
+        langSectionTitle: "ऐप की भाषा / App Language"
+      },
+      as: {
+        home: "হোম",
+        games: "খেল",
+        family: "পৰিয়াল",
+        meds: "ঔষধ",
+        voiceAi: "ভইচ এআই",
+        morning: "সুপ্ৰভাত",
+        afternoon: "শুভ অপৰাহ্ন",
+        evening: "শুভ সন্ধিয়া",
+        night: "শুভ ৰাত্ৰি",
+        langSectionTitle: "এপৰ ভাষা / App Language"
+      },
+      brx: {
+        home: "नोगोर",
+        games: "गेलेनाय",
+        family: "नखर",
+        meds: "मुलि",
+        voiceAi: "गोरा ए.आइ.",
+        morning: "मोजां फुं",
+        afternoon: "मोजां सानजौफु",
+        evening: "मोजां बेलासे",
+        night: "मोजां हर",
+        langSectionTitle: "एपनि राव / App Language"
+      }
+    };
+
+    function updateClock() {
+      const now = new Date();
+      const raw24Hour = now.getHours(); // preserve raw 24h for greeting logic
+      let hours = raw24Hour;
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      const hoursStr = String(hours).padStart(2, '0');
+
+      const clockEl = document.getElementById('clock-display');
+      if (clockEl) {
+        clockEl.innerHTML = `${hoursStr}:${minutes} <span class="text-2xl font-sans font-bold text-slate-500">${ampm}</span>`;
+      }
+
+      // Read active language from storage
+      const activeLang = (typeof localStorage !== 'undefined' && (localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang'))) || 'en';
+      const dict = (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS[activeLang])
+        || (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS['en'])
+        || CORE_TRANSLATIONS[activeLang]
+        || CORE_TRANSLATIONS['en'];
+
+      const dateEl = document.getElementById('date-display');
+      if (dateEl) {
+        const localeMap = { en: 'en-US', hi: 'hi-IN', as: 'as-IN', brx: 'hi-IN' };
+        try {
+          dateEl.textContent = now.toLocaleDateString(localeMap[activeLang] || 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        } catch (_) {
+          dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+      }
+
+      // Correct time-of-day greeting: 04-11=morning, 12-16=afternoon, 17-20=evening, 21-03=night
+      let greetingKey;
+      if (raw24Hour >= 4 && raw24Hour < 12) greetingKey = 'morning';
+      else if (raw24Hour >= 12 && raw24Hour < 17) greetingKey = 'afternoon';
+      else if (raw24Hour >= 17 && raw24Hour < 21) greetingKey = 'evening';
+      else greetingKey = 'night';
+      const greetingWord = dict[greetingKey] || (greetingKey === 'night' ? "Good Night" : "Good Morning");
+
+      // Contextual subtitle message
+      const SUBTITLES = {
+        morning: {
+          en: "A calm morning. Your daily routine is going smoothly.",
+          hi: "एक शांत सुबह। आपकी दैनिक दिनचर्या सुचारू रूप से चल रही है।",
+          as: "এক শান্ত পুৱা। আপোনাৰ দৈনিক কাম-কাজ সুচাৰুৰূপে চলি আছে।",
+          brx: "मोजां फुं। नोंनि सानफ्रोमबोनि खामानिया मोजांयै जागासिनो दं।"
+        },
+        afternoon: {
+          en: "A bright afternoon. Remember to rest and hydrate.",
+          hi: "एक सुखद दोपहर। आराम करें और पानी पिएं।",
+          as: "এক উজ্জ্বল অপৰাহ্ন। অলপ জিৰণি লওক আৰু পানী খাওক।",
+          brx: "मोजां सानजौफु। जिराय आरो दै लों।"
+        },
+        evening: {
+          en: "A peaceful evening. Time for dinner and routine meds.",
+          hi: "एक शांत संध्या। रात के खाने और दवाई का समय।",
+          as: "এক শান্ত সন্ধিয়া। নিশাৰ আহাৰ আৰু নিয়মীয়া ঔষধৰ সময়।",
+          brx: "मोजां बेलासे। ओंखाम जानाय आरो मुलिनि सम।"
+        },
+        night: {
+          en: "A restful night. Time to wind down and sleep peacefully.",
+          hi: "एक सुकून भरी रात। आराम से सोने का समय।",
+          as: "এক শান্ত ৰাতি। জিৰণি লওক আৰু শান্তভাৱে শুই থাকক।",
+          brx: "मोजां हर। शान्तियै उन्दुनायनि सम।"
+        }
+      };
+
+      const subTimeEl = document.getElementById('sub-time-greeting');
+      if (subTimeEl) {
+        const subMap = SUBTITLES[greetingKey] || SUBTITLES.morning;
+        subTimeEl.textContent = subMap[activeLang] || subMap.en;
+      }
+
+      const patientFullName = localStorage.getItem('careloop_patient_name') || 'Keshav Sharma';
+      const patientFirstName = patientFullName.trim().split(' ')[0] || 'Keshav';
+      const greetingEl = document.getElementById('greeting-text');
+      if (greetingEl) {
+        greetingEl.textContent = `${greetingWord}, ${patientFirstName}`;
+      }
+
+      const emContact = localStorage.getItem('careloop_emergency_contact') || 'Priya Sharma';
+      const emSub = document.getElementById('emergency-sub-text');
+      if (emSub) {
+        const callDesc = dict.emergencyCallDesc || `Direct 1-tap call to ${emContact}`;
+        emSub.textContent = callDesc;
+      }
+    }
+
+    function applyLanguage(code) {
+      const activeCode = code || (typeof localStorage !== 'undefined' && (localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang'))) || 'en';
+      if (typeof window.applyTranslationsToDOM === 'function') {
+        window.applyTranslationsToDOM(activeCode);
+      }
+      updateClock();
+
+      if (!window.CARELOOP_TRANSLATIONS) return;
+      const t = window.CARELOOP_TRANSLATIONS[activeCode] || window.CARELOOP_TRANSLATIONS['en'];
+      if (!t) return;
+
+      if (t.currentTime && document.getElementById('lbl-current-time')) document.getElementById('lbl-current-time').textContent = t.currentTime;
+      if (t.morningMeds && document.getElementById('lbl-morning-meds')) document.getElementById('lbl-morning-meds').textContent = t.morningMeds;
+      if (t.morningMedsStatus && document.getElementById('lbl-morning-meds-sub')) document.getElementById('lbl-morning-meds-sub').textContent = t.morningMedsStatus;
+      if (t.gamePlayed && document.getElementById('lbl-game-played')) document.getElementById('lbl-game-played').textContent = t.gamePlayed;
+      if (t.gamePlayedStatus && document.getElementById('lbl-game-played-sub')) document.getElementById('lbl-game-played-sub').textContent = t.gamePlayedStatus;
+      if (t.eveningDose && document.getElementById('lbl-evening-dose')) document.getElementById('lbl-evening-dose').textContent = t.eveningDose;
+      if (t.eveningDoseStatus && document.getElementById('lbl-evening-dose-sub')) document.getElementById('lbl-evening-dose-sub').textContent = t.eveningDoseStatus;
+      if (t.askAssistant && document.getElementById('lbl-voice-title')) document.getElementById('lbl-voice-title').textContent = t.askAssistant;
+      if (t.tapToSpeak && document.getElementById('lbl-voice-sub')) document.getElementById('lbl-voice-sub').textContent = t.tapToSpeak;
+      if (t.brainGames && document.getElementById('lbl-games-title')) document.getElementById('lbl-games-title').textContent = t.brainGames;
+      if (t.playExercise && document.getElementById('lbl-games-play')) document.getElementById('lbl-games-play').textContent = t.playExercise;
+      if (t.emergencyCall && document.getElementById('lbl-calling-title')) document.getElementById('lbl-calling-title').textContent = t.emergencyCall;
+      if (t.emergencyCallDesc && document.getElementById('emergency-sub-text')) document.getElementById('emergency-sub-text').textContent = t.emergencyCallDesc;
+      if (t.medication && document.getElementById('lbl-meds-title')) document.getElementById('lbl-meds-title').textContent = t.medication;
+      if (t.viewRx && document.getElementById('lbl-meds-play')) document.getElementById('lbl-meds-play').textContent = t.viewRx;
+      if (t.familyPhotos && document.getElementById('lbl-vault-title')) document.getElementById('lbl-vault-title').textContent = t.familyPhotos;
+      if (t.browseMemories && document.getElementById('lbl-vault-play')) document.getElementById('lbl-vault-play').textContent = t.browseMemories;
+    }
+
+    window.addEventListener('message', (e) => {
+      if (!e.data) return;
+      if ((e.data.type === 'languageChange' || e.data.type === 'appLanguageChange') && e.data.code) {
+        applyLanguage(e.data.code);
+      }
+      if (e.data.type === 'patientUpdated') {
+        updateClock();
+      }
+    });
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'careloop_patient_name' || e.key === 'careloop_app_language' || e.key === 'careloop_lang') {
+        updateClock();
+        applyLanguage(localStorage.getItem('careloop_app_language') || 'en');
+      }
+    });
+
+    const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
+    applyLanguage(activeLang);
+
+    function navTo(file, id) {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      window.parent.postMessage({
+        type: 'navigate',
+        route: { role: 'patient', file: file, id: id }
+      }, '*');
+    }
+  </script>
+
+  <!-- ==================================================================== -->
+  <!-- REACT COMPONENT: Profile Button, 3-Step Auth Modal, & Language Selector -->
+  <!-- ==================================================================== -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function HeaderProfileAndAuthModal() {
+      const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+      const [step, setStep] = useState(1);
+      const [selectedDemo, setSelectedDemo] = useState('patient'); // 'caregiver' | 'patient'
+      const [fullName, setFullName] = useState(() => localStorage.getItem('careloop_patient_name') || 'Keshav Sharma');
+      const [age, setAge] = useState('74');
+      const [role, setRole] = useState(() => localStorage.getItem('careloop_user_role') || 'patient');
+      const [appLanguage, setAppLanguage] = useState(() => localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en');
+      const [userInitial, setUserInitial] = useState(() => {
+        const name = localStorage.getItem('careloop_patient_name') || 'Keshav Sharma';
+        return name.trim().charAt(0).toUpperCase() || 'K';
+      });
+
+      useEffect(() => {
+        window.triggerOpenAuth = () => {
+          setIsAuthModalOpen(true);
+          setStep(1);
+        };
+      }, []);
+
+      useEffect(() => {
+        const handleStorage = (e) => {
+          if (e.key === 'careloop_patient_name' && e.newValue) {
+            setFullName(e.newValue);
+            setUserInitial(e.newValue.trim().charAt(0).toUpperCase() || 'K');
+          }
+          if ((e.key === 'careloop_app_language' || e.key === 'careloop_lang') && e.newValue) {
+            setAppLanguage(e.newValue);
+          }
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+      }, []);
+
+      // Language Switcher Handler
+      const handleLanguageSelect = (langCode) => {
+        setAppLanguage(langCode);
+        localStorage.setItem('careloop_app_language', langCode);
+        localStorage.setItem('careloop_lang', langCode);
+        if (typeof updateClock === 'function') updateClock();
+        if (typeof applyLanguage === 'function') applyLanguage(langCode);
+
+        // Notify parent shell to update bottom nav & other screens
+        try {
+          window.parent.postMessage({
+            type: 'languageChange',
+            code: langCode,
+            appLanguage: langCode
+          }, '*');
+        } catch(err) {}
+      };
+
+      // STEP 1: Quick Demo Selection
+      const handleSelectDemo = (type) => {
+        setSelectedDemo(type);
+        if (type === 'caregiver') {
+          setFullName('Rahul Sharma');
+          setAge('45');
+          setRole('caregiver');
+        } else {
+          setFullName('Keshav Sharma');
+          setAge('74');
+          setRole('patient');
+        }
+      };
+
+      // STEP 2: Auto-filled OTP with 1.5s simulated transition
+      useEffect(() => {
+        let timer;
+        if (step === 2 && isAuthModalOpen) {
+          timer = setTimeout(() => {
+            setStep(3);
+          }, 1500);
+        }
+        return () => {
+          if (timer) clearTimeout(timer);
+        };
+      }, [step, isAuthModalOpen]);
+
+      // STEP 3: Save & Enter App
+      const handleSaveAndEnter = (e) => {
+        if (e) e.preventDefault();
+        const finalName = fullName.trim() || (selectedDemo === 'caregiver' ? 'Rahul Sharma' : 'Keshav Sharma');
+        const finalAge = age || (selectedDemo === 'caregiver' ? '45' : '74');
+        const finalRole = role || selectedDemo;
+        const initial = finalName.charAt(0).toUpperCase();
+
+        // 1. Update localStorage
+        localStorage.setItem('careloop_patient_name', finalName);
+        localStorage.setItem('careloop_user_role', finalRole);
+        localStorage.setItem('careloop_user_profile', JSON.stringify({
+          name: finalName,
+          age: finalAge,
+          role: finalRole,
+          initials: initial
+        }));
+        localStorage.setItem('careloop_authenticated', 'true');
+
+        // 2. Update local state
+        setUserInitial(initial);
+        setIsAuthModalOpen(false);
+        setStep(1);
+
+        // 3. Update Home Screen greeting and display
+        if (typeof updateClock === 'function') {
+          updateClock();
+        }
+
+        // 4. Notify parent shell
+        try {
+          window.parent.postMessage({
+            type: 'patientUpdated',
+            name: finalName,
+            role: finalRole
+          }, '*');
+        } catch(err) {}
+
+        // 5. Role-based routing: if Caregiver, route to Caregiver Dashboard! If Patient, stay on home screen.
+        if (finalRole === 'caregiver') {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({
+              type: 'navigate',
+              route: { role: 'dashboard', file: '09-dashboard-overview.html', navId: 'overview' }
+            }, '*');
+          } else {
+            window.location.href = '../dashboard/09-dashboard-overview.html';
+          }
+        }
+      };
+
+      return (
+        <React.Fragment>
+          {/* Circular Profile/User Icon in Top Right */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsAuthModalOpen(true);
+              setStep(1);
+            }}
+            className="w-12 h-12 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center font-bold text-lg shadow-sm border border-blue-200 cursor-pointer transition-all active:scale-95"
+            title="User Profile / Language Switcher"
+          >
+            <span>{userInitial}</span>
+          </button>
+
+          {/* Centered 3-Step Prototype Authentication / User Switcher Modal */}
+          {isAuthModalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setIsAuthModalOpen(false)}
+            >
+              <div
+                className="w-full max-w-[390px] bg-white rounded-3xl shadow-2xl border border-white/80 p-6 relative overflow-hidden text-slate-800 animate-modal max-h-[92vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+                      <span className="material-symbols-outlined text-[18px]">account_circle</span>
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
+                        MindCare
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                      </div>
+                      <div className="text-[10px] font-mono font-semibold text-slate-400">DEMO AUTH & LANGUAGE</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* Stepper Dots */}
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full transition-all ${step >= 1 ? 'bg-blue-500' : 'bg-slate-200'}`}></div>
+                      <div className="w-2 h-0.5 bg-slate-200"></div>
+                      <div className={`w-2 h-2 rounded-full transition-all ${step >= 2 ? 'bg-blue-500' : 'bg-slate-200'}`}></div>
+                      <div className="w-2 h-0.5 bg-slate-200"></div>
+                      <div className={`w-2 h-2 rounded-full transition-all ${step >= 3 ? 'bg-blue-500' : 'bg-slate-200'}`}></div>
+                    </div>
+
+                    {/* Close Modal Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsAuthModalOpen(false)}
+                      className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer transition-colors"
+                      title="Close"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* STEP 1: DEMO SELECTION */}
+                {step === 1 && (
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-800 tracking-tight mb-1">
+                      Select Demo Account
+                    </h2>
+                    <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                      Choose a demo persona to explore the app perspective instantly without credentials.
+                    </p>
+
+                    <div className="flex flex-col gap-2.5 mb-5">
+                      {/* Option 1: Caregiver (Rahul) */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectDemo('caregiver')}
+                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all text-left cursor-pointer ${
+                          selectedDemo === 'caregiver'
+                            ? 'border-2 border-blue-500 bg-blue-50/70 text-blue-900 shadow-sm'
+                            : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 text-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                            <span className="material-symbols-outlined text-[20px]">supervisor_account</span>
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs text-slate-900">Login as Caregiver (Rahul)</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">Rahul Sharma · Age 45 · Caregiver Access</div>
+                          </div>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          selectedDemo === 'caregiver' ? 'border-blue-500 bg-blue-500' : 'border-slate-300 bg-transparent'
+                        }`}>
+                          {selectedDemo === 'caregiver' && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                        </div>
+                      </button>
+
+                      {/* Option 2: Patient (Keshav/Kamala) */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectDemo('patient')}
+                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all text-left cursor-pointer ${
+                          selectedDemo === 'patient'
+                            ? 'border-2 border-blue-500 bg-blue-50/70 text-blue-900 shadow-sm'
+                            : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 text-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                            <span className="material-symbols-outlined text-[20px]">elderly</span>
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs text-slate-900">Login as Patient (Keshav/Kamala)</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">Keshav Sharma · Age 74 · Patient Companion</div>
+                          </div>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          selectedDemo === 'patient' ? 'border-blue-500 bg-blue-500' : 'border-slate-300 bg-transparent'
+                        }`}>
+                          {selectedDemo === 'patient' && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                        </div>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      className="w-full py-3.5 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.99]"
+                    >
+                      <span>Next</span>
+                      <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* STEP 2: AUTO-FILLED OTP */}
+                {step === 2 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        className="text-blue-600 text-xs flex items-center gap-1 cursor-pointer hover:underline font-semibold"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                        <span>Change persona</span>
+                      </button>
+                      <span className="font-mono text-[10px] text-slate-400 font-semibold">STEP 2 / 3</span>
+                    </div>
+
+                    <h2 className="text-lg font-extrabold text-slate-800 tracking-tight mb-1">
+                      Auto-Verifying Code
+                    </h2>
+                    <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                      Simulating instant verification for <strong className="text-slate-800">{selectedDemo === 'caregiver' ? 'Rahul (Caregiver)' : 'Keshav (Patient)'}</strong>.
+                    </p>
+
+                    {/* 6 Large OTP boxes */}
+                    <div className="flex justify-between gap-1.5 max-w-[280px] mx-auto mb-4">
+                      {['1', '2', '3', '4', '5', '6'].map((digit, idx) => (
+                        <div
+                          key={idx}
+                          className="w-10 h-12 rounded-xl bg-blue-50 border-2 border-blue-500 text-blue-600 font-mono text-xl font-bold flex items-center justify-center select-none shadow-xs"
+                        >
+                          {digit}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Verification Loading Spinner */}
+                    <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center gap-2.5 mb-2.5">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-xs font-semibold text-blue-600">Verifying automatically...</span>
+                    </div>
+                    <div className="text-center text-[11px] text-slate-400 font-mono">
+                      Auto-advancing in 1.5 seconds...
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: PROFILE ONBOARDING */}
+                {step === 3 && (
+                  <form onSubmit={handleSaveAndEnter}>
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        className="text-blue-600 text-xs flex items-center gap-1 cursor-pointer hover:underline font-semibold"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                        <span>Back</span>
+                      </button>
+                      <span className="font-mono text-[10px] text-slate-400 font-semibold">STEP 3 / 3</span>
+                    </div>
+
+                    <h2 className="text-lg font-extrabold text-slate-800 tracking-tight mb-1">
+                      Profile Setup
+                    </h2>
+                    <p className="text-xs text-slate-500 mb-3.5 leading-relaxed">
+                      Confirm user credentials to personalize greetings and view routing.
+                    </p>
+
+                    <div className="space-y-3 mb-4">
+                      {/* Name Input */}
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          required
+                          className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all"
+                        />
+                      </div>
+
+                      {/* Age Input */}
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Age</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="120"
+                          value={age}
+                          onChange={(e) => setAge(e.target.value)}
+                          required
+                          className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all"
+                        />
+                      </div>
+
+                      {/* Role Selector */}
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Role</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setRole('caregiver')}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                              role === 'caregiver'
+                                ? 'border-2 border-blue-500 bg-blue-50/70 text-blue-900 font-bold'
+                                : 'border-slate-200 bg-slate-50 text-slate-600'
+                            }`}
+                          >
+                            <div className="text-xs">Caregiver</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Clinical View</div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setRole('patient')}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                              role === 'patient'
+                                ? 'border-2 border-blue-500 bg-blue-50/70 text-blue-900 font-bold'
+                                : 'border-slate-200 bg-slate-50 text-slate-600'
+                            }`}
+                          >
+                            <div className="text-xs">Patient</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Companion View</div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.99]"
+                    >
+                      <span>Save & Enter App</span>
+                      <span className="material-symbols-outlined text-[18px]">login</span>
+                    </button>
+                  </form>
+                )}
+
+                {/* ================================================================ */}
+                {/* 3. APP LANGUAGE / भाषा SELECTOR (NER Focused)                     */}
+                {/* ================================================================ */}
+                <div className="mt-5 pt-4 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-blue-600">translate</span>
+                      App Language / भाषा
+                    </label>
+                    <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                      4 REGIONAL LANGUAGES
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { code: 'en', label: 'English' },
+                      { code: 'hi', label: 'हिन्दी' },
+                      { code: 'as', label: 'অসমীয়া (Assamese)' },
+                      { code: 'brx', label: 'बड़ो (Bodo)' }
+                    ].map((l) => (
+                      <button
+                        key={l.code}
+                        type="button"
+                        onClick={() => handleLanguageSelect(l.code)}
+                        className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
+                          appLanguage === l.code
+                            ? 'bg-blue-500 text-white shadow-md'
+                            : 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
+                        }`}
+                      >
+                        {appLanguage === l.code && (
+                          <span className="material-symbols-outlined text-[15px]">check</span>
+                        )}
+                        <span>{l.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+        </React.Fragment>
+      );
+    }
+
+    // Mount to root
+    const rootEl = document.getElementById('header-profile-root');
+    if (rootEl) {
+      const Provider = (window.LanguageProvider || (window.CareLoopLanguageContext && window.CareLoopLanguageContext.LanguageProvider)) || React.Fragment;
+      ReactDOM.createRoot(rootEl).render(
+        <Provider>
+          <HeaderProfileAndAuthModal />
+        </Provider>
+      );
+    }
+  </script>
+</body>
+</html>

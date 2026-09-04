@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>CareLoop - Caregiver Onboarding Wizard</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            canvas: "#0B0D0C",
+            surface: "#121514",
+            "surface-raised": "#1A1E1C",
+            border: "#26302C",
+            primary: "#4ADE94",
+            "primary-hover": "#38c47d",
+            secondary: "#9BA8A2",
+            danger: "#EF5A5A",
+            warn: "#F5B942",
+            info: "#38BDF8"
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Light Mode Overrides */
+    html.light {
+      --bg-canvas: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --bg-surface-raised: #F1F5F9;
+      --border-color: #E2E8F0;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+    }
+    html.light body {
+      background-color: var(--bg-canvas) !important;
+      color: var(--text-main) !important;
+    }
+    html.light .wizard-card {
+      background-color: var(--bg-surface) !important;
+      border-color: var(--border-color) !important;
+    }
+    html.light .wizard-header {
+      background-color: var(--bg-surface-raised) !important;
+      border-color: var(--border-color) !important;
+    }
+    html.light .wizard-input, html.light .wizard-select {
+      background-color: var(--bg-surface-raised) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-main) !important;
+    }
+    html.light .text-primary-text {
+      color: var(--text-main) !important;
+    }
+    html.light .text-secondary-text {
+      color: var(--text-muted) !important;
+    }
+    html.light .border-subtle {
+      border-color: var(--border-color) !important;
+    }
+    html.light .bg-subtle {
+      background-color: var(--bg-surface-raised) !important;
+    }
+    .step-pane {
+      display: none;
+      animation: fadeIn 0.25s ease-in-out;
+    }
+    .step-pane.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-canvas text-[#F4F6F4] min-h-screen flex items-center justify-center p-4 font-sans selection:bg-[#4ADE94]/30">
+
+  <main class="w-full max-w-[620px] bg-surface rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col wizard-card transition-all">
+    
+    <!-- Code-Editor Chrome Header Strip -->
+    <div class="px-5 py-3.5 bg-surface-raised border-b border-border flex items-center justify-between wizard-header">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-danger inline-block"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-warn inline-block"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>
+        <span class="font-mono text-xs text-secondary font-medium ml-2 tracking-wide flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[15px] text-primary">clinical_notes</span>
+          ONBOARDING_WIZARD.TSX
+        </span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-semibold uppercase">
+          Setup Mode
+        </span>
+      </div>
+    </div>
+
+    <!-- Stepper Navigation Header -->
+    <div class="px-6 pt-6 pb-2 border-b border-border/60">
+      <div class="flex items-center justify-between w-full relative">
+        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-border z-0"></div>
+        
+        <!-- Step 1 Indicator -->
+        <div class="z-10 bg-surface px-1.5">
+          <button type="button" onclick="goToStep(1)" id="step-pill-1" class="h-7 px-3 rounded-full bg-primary text-canvas font-mono text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[14px]">person</span>
+            <span>STEP 01</span>
+          </button>
+        </div>
+
+        <!-- Step 2 Indicator -->
+        <div class="z-10 bg-surface px-1.5">
+          <button type="button" onclick="goToStep(2)" id="step-pill-2" class="h-7 px-3 rounded-full bg-surface-raised border border-border text-secondary font-mono text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[14px]">medication</span>
+            <span>STEP 02</span>
+          </button>
+        </div>
+
+        <!-- Step 3 Indicator -->
+        <div class="z-10 bg-surface px-1.5">
+          <button type="button" onclick="goToStep(3)" id="step-pill-3" class="h-7 px-3 rounded-full bg-surface-raised border border-border text-secondary font-mono text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[14px]">emergency</span>
+            <span>STEP 03</span>
+          </button>
+        </div>
+
+        <!-- Step 4 Indicator -->
+        <div class="z-10 bg-surface px-1.5">
+          <button type="button" onclick="goToStep(4)" id="step-pill-4" class="h-7 px-3 rounded-full bg-surface-raised border border-border text-secondary font-mono text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[14px]">verified</span>
+            <span>STEP 04</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step Title Context -->
+      <div class="mt-4 mb-1">
+        <h2 id="step-main-title" class="text-xl font-bold text-[#F4F6F4] text-primary-text">Patient Clinical Profile</h2>
+        <p id="step-sub-title" class="text-xs text-secondary text-secondary-text mt-0.5">Establish primary care record and language preference for Kamala Sharma.</p>
+      </div>
+    </div>
+
+    <!-- Wizard Form Body -->
+    <div class="p-6 flex-1 flex flex-col justify-between">
+
+      <!-- ================= STEP 1: PATIENT PROFILE ================= -->
+      <div id="step-1" class="step-pane active space-y-4">
+        <div>
+          <label class="block text-xs font-mono text-secondary uppercase tracking-wider mb-1.5 font-semibold">Patient Full Name</label>
+          <div class="relative">
+            <input type="text" id="patient-name-input" value="Kamala Sharma" placeholder="e.g. Kamala Sharma" class="w-full bg-surface-raised border border-border rounded-xl px-4 py-2.5 text-sm text-[#F4F6F4] wizard-input focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-medium pl-10"/>
+            <span class="material-symbols-outlined text-secondary absolute left-3 top-1/2 -translate-y-1/2 text-[18px]">account_circle</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-xs font-mono text-secondary uppercase tracking-wider mb-1.5 font-semibold">Date of Birth</label>
+            <input type="date" id="patient-dob-input" value="1950-04-12" class="w-full bg-surface-raised border border-border rounded-xl px-3.5 py-2.5 text-sm text-[#F4F6F4] wizard-input focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"/>
+            <span class="text-[11px] text-secondary mt-1 block">Age: 74 years</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-mono text-secondary uppercase tracking-wider mb-1.5 font-semibold">Gender</label>
+            <select id="patient-gender-input" class="w-full bg-surface-raised border border-border rounded-xl px-3.5 py-2.5 text-sm text-[#F4F6F4] wizard-select focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
+              <option value="Female" selected>Female</option>
+              <option value="Male">Male</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-secondary uppercase tracking-wider mb-1.5 font-semibold">Primary Regional Language (22 Indian Languages)</label>
+          <div class="relative">
+            <select id="patient-lang-select" class="w-full bg-surface-raised border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#F4F6F4] wizard-select focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all appearance-none cursor-pointer">
+              <option value="en">English (Official / Clinical)</option>
+              <option value="hi" selected>हिन्दी (Hindi)</option>
+              <option value="as">অসমীয়া (Assamese)</option>
+              <option value="bn">বাংলা (Bengali)</option>
+              <option value="gu">ગુજરાતી (Gujarati)</option>
+              <option value="kn">ಕನ್ನಡ (Kannada)</option>
+              <option value="ml">മലയാളം (Malayalam)</option>
+              <option value="mr">मराठी (Marathi)</option>
+              <option value="ne">नेपाली (Nepali)</option>
+              <option value="or">ଓଡ଼ିଆ (Odia)</option>
+              <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+              <option value="sa">संस्कृतम् (Sanskrit)</option>
+              <option value="ta">தமிழ் (Tamil)</option>
+              <option value="te">తెలుగు (Telugu)</option>
+              <option value="ur">اردو (Urdu)</option>
+              <option value="sat">ᱥᱟᱱᱛᱟᱲᱤ (Santali)</option>
+              <option value="kok">कोंकणी (Konkani)</option>
+              <option value="ks">کٲشُر (Kashmiri)</option>
+              <option value="sd">سنڌي (Sindhi)</option>
+              <option value="brx">बड़ो (Bodo)</option>
+              <option value="doi">डोगरी (Dogri)</option>
+              <option value="mai">मैथिली (Maithili)</option>
+              <option value="mni">মৈতৈলোন্ (Manipuri)</option>
+            </select>
+            <span class="material-symbols-outlined text-primary absolute left-3 top-1/2 -translate-y-1/2 text-[18px]">translate</span>
+            <span class="material-symbols-outlined text-secondary absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">expand_more</span>
+          </div>
+          <p class="text-[11px] text-secondary mt-1">Configures voice assistant, daily reminders, and game narration.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-secondary uppercase tracking-wider mb-1.5 font-semibold">Clinical Protocol Monitoring</label>
+          <div class="bg-surface-raised border border-border rounded-xl p-3 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-primary text-[20px]">monitor_heart</span>
+              <div>
+                <div class="text-xs font-bold text-[#F4F6F4]">MCI Protocol Level 1 (Mild Cognitive Impairment)</div>
+                <div class="text-[11px] text-secondary">Non-intrusive daily reminders &amp; CAS tracking</div>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= STEP 2: MEDICATION SCHEDULE ================= -->
+      <div id="step-2" class="step-pane space-y-3.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-mono text-secondary uppercase tracking-wider font-semibold">Active Daily Prescriptions</span>
+          <button type="button" onclick="showAddMedPrompt()" class="text-xs font-semibold text-primary hover:text-primary-hover flex items-center gap-1">
+            <span class="material-symbols-outlined text-[16px]">add_circle</span> Add Medication
+          </button>
+        </div>
+
+        <!-- Meds List Container -->
+        <div id="med-list-container" class="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
+          <!-- Medication 1 -->
+          <div class="bg-surface-raised border border-border rounded-xl p-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <span class="material-symbols-outlined text-[18px]">pill</span>
+              </div>
+              <div>
+                <div class="text-sm font-bold text-[#F4F6F4]">Metformin <span class="text-xs font-mono text-secondary font-normal">500mg</span></div>
+                <div class="text-[11px] text-secondary">Twice daily · 8:00 AM &amp; 8:00 PM · Take with meal</div>
+              </div>
+            </div>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">Active</span>
+          </div>
+
+          <!-- Medication 2 -->
+          <div class="bg-surface-raised border border-border rounded-xl p-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-warn/10 border border-warn/20 flex items-center justify-center text-warn">
+                <span class="material-symbols-outlined text-[18px]">prescriptions</span>
+              </div>
+              <div>
+                <div class="text-sm font-bold text-[#F4F6F4]">Lisinopril <span class="text-xs font-mono text-secondary font-normal">10mg</span></div>
+                <div class="text-[11px] text-secondary">Once daily · 8:00 PM (Evening) · Blood pressure</div>
+              </div>
+            </div>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-warn/20 text-warn border border-warn/30">Critical</span>
+          </div>
+
+          <!-- Medication 3 -->
+          <div class="bg-surface-raised border border-border rounded-xl p-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-info/10 border border-info/20 flex items-center justify-center text-info">
+                <span class="material-symbols-outlined text-[18px]">medication_liquid</span>
+              </div>
+              <div>
+                <div class="text-sm font-bold text-[#F4F6F4]">Atorvastatin <span class="text-xs font-mono text-secondary font-normal">20mg</span></div>
+                <div class="text-[11px] text-secondary">Once daily · 10:00 PM (Bedtime) · Cholesterol</div>
+              </div>
+            </div>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">Active</span>
+          </div>
+        </div>
+
+        <!-- Medication Quick Add Form (Hidden toggle) -->
+        <div id="add-med-form" class="hidden bg-surface border border-primary/40 rounded-xl p-3 space-y-2">
+          <div class="text-xs font-bold text-primary flex items-center gap-1">
+            <span class="material-symbols-outlined text-[16px]">add</span> Add Prescription
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" id="new-med-name" placeholder="Drug Name (e.g. Aspirin)" class="w-full bg-surface-raised border border-border rounded-lg px-3 py-1.5 text-xs text-[#F4F6F4] outline-none focus:border-primary"/>
+            <input type="text" id="new-med-dose" placeholder="Dose (e.g. 75mg)" class="w-full bg-surface-raised border border-border rounded-lg px-3 py-1.5 text-xs text-[#F4F6F4] outline-none focus:border-primary"/>
+          </div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button type="button" onclick="hideAddMedPrompt()" class="px-2.5 py-1 text-xs text-secondary hover:text-[#F4F6F4]">Cancel</button>
+            <button type="button" onclick="submitNewMed()" class="px-3 py-1 bg-primary text-canvas rounded-lg text-xs font-bold">Save</button>
+          </div>
+        </div>
+
+        <div class="bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-start gap-2.5">
+          <span class="material-symbols-outlined text-primary text-[18px] mt-0.5">verified_user</span>
+          <p class="text-[11px] text-secondary leading-relaxed">
+            Prescriptions automatically configure full-screen visual takeovers on Kamala Sharma's companion tablet at reminder times.
+          </p>
+        </div>
+      </div>
+
+      <!-- ================= STEP 3: FAMILY & EMERGENCY CONTACTS ================= -->
+      <div id="step-3" class="step-pane space-y-3.5">
+        <div class="text-xs font-mono text-secondary uppercase tracking-wider font-semibold">Primary Emergency Circle</div>
+
+        <!-- Emergency Contact: Priya Sharma -->
+        <div class="bg-surface-raised border-2 border-danger/60 rounded-xl p-3.5 relative">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-danger animate-ping"></span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-danger/20 text-danger border border-danger/40 font-bold uppercase">
+                Primary Emergency Contact
+              </span>
+            </div>
+            <span class="text-xs font-mono text-secondary">Daughter</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-danger/10 border border-danger/30 flex items-center justify-center text-danger font-bold text-sm">
+              PS
+            </div>
+            <div class="flex-1">
+              <input type="text" id="emergency-name-input" value="Priya Sharma" class="bg-transparent font-bold text-sm text-[#F4F6F4] border-b border-border/60 focus:border-danger outline-none w-full"/>
+              <div class="flex items-center gap-1.5 text-xs text-secondary mt-0.5">
+                <span class="material-symbols-outlined text-[14px]">phone</span>
+                <input type="tel" id="emergency-phone-input" value="+91 98765 43210" class="bg-transparent text-xs font-mono text-secondary border-none outline-none w-44"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Secondary Contact: Dr. Ravi Bose -->
+        <div class="bg-surface-raised border border-border rounded-xl p-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-info/10 border border-info/30 flex items-center justify-center text-info font-bold text-xs">
+              RB
+            </div>
+            <div>
+              <div class="text-sm font-bold text-[#F4F6F4]">Dr. Ravi Bose</div>
+              <div class="text-xs text-secondary font-mono">+91 11-2345-6789 · Attending Physician</div>
+            </div>
+          </div>
+          <span class="text-xs font-mono text-secondary">Physician</span>
+        </div>
+
+        <!-- Caregiver: Rahul K. -->
+        <div class="bg-surface-raised border border-border rounded-xl p-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold text-xs">
+              RK
+            </div>
+            <div>
+              <div class="text-sm font-bold text-[#F4F6F4]">Rahul K.</div>
+              <div class="text-xs text-secondary">rahul@careloop.health · Primary Caregiver</div>
+            </div>
+          </div>
+          <span class="text-xs font-mono text-primary font-semibold">Active Caregiver</span>
+        </div>
+      </div>
+
+      <!-- ================= STEP 4: COGNITIVE & REVIEW ================= -->
+      <div id="step-4" class="step-pane space-y-4">
+        <div class="text-xs font-mono text-secondary uppercase tracking-wider font-semibold">CareLoop System Summary</div>
+
+        <!-- Summary Card -->
+        <div class="bg-surface-raised border border-border rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between pb-3 border-b border-border">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm">
+                KS
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-[#F4F6F4]" id="summary-patient-name">Kamala Sharma</h3>
+                <p class="text-xs text-secondary" id="summary-patient-detail">Age 74 · Female · Hindi / English</p>
+              </div>
+            </div>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 font-semibold">
+              READY
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="p-2.5 rounded-lg bg-surface border border-border/80">
+              <span class="text-secondary block font-mono text-[10px] uppercase">Emergency Line</span>
+              <span class="font-bold text-[#F4F6F4]" id="summary-emergency">Priya Sharma</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-surface border border-border/80">
+              <span class="text-secondary block font-mono text-[10px] uppercase">Active Caregiver</span>
+              <span class="font-bold text-[#F4F6F4]">Rahul K.</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-surface border border-border/80">
+              <span class="text-secondary block font-mono text-[10px] uppercase">Prescriptions</span>
+              <span class="font-bold text-[#F4F6F4]" id="summary-med-count">3 Active Regimens</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-surface border border-border/80">
+              <span class="text-secondary block font-mono text-[10px] uppercase">Cognitive Suite</span>
+              <span class="font-bold text-primary">Adaptive CAS Enabled</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature Confirmation Checks -->
+        <div class="space-y-2">
+          <div class="flex items-center gap-2.5 text-xs text-[#F4F6F4]">
+            <span class="material-symbols-outlined text-primary text-[18px]">check_box</span>
+            <span>Bilingual Voice AI configured for companion tablet</span>
+          </div>
+          <div class="flex items-center gap-2.5 text-xs text-[#F4F6F4]">
+            <span class="material-symbols-outlined text-primary text-[18px]">check_box</span>
+            <span>Cognitive activity scoring (CAS) baseline initialized</span>
+          </div>
+          <div class="flex items-center gap-2.5 text-xs text-[#F4F6F4]">
+            <span class="material-symbols-outlined text-primary text-[18px]">check_box</span>
+            <span>AWS SNS SMS alerts linked for Priya Sharma</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stepper Controls (Back / Next / Launch) -->
+      <div class="pt-6 border-t border-border mt-4 flex items-center justify-between gap-3">
+        <button type="button" id="btn-back" onclick="prevStep()" class="px-4 py-2.5 rounded-xl border border-border text-secondary hover:text-[#F4F6F4] hover:bg-surface-raised text-xs font-mono font-semibold flex items-center gap-1.5 transition-all opacity-40 pointer-events-none">
+          <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+          <span>BACK</span>
+        </button>
+
+        <span class="text-xs font-mono text-secondary" id="step-counter-text">Step 1 of 4</span>
+
+        <button type="button" id="btn-next" onclick="nextStep()" class="px-6 py-2.5 rounded-xl bg-primary text-canvas hover:bg-primary-hover text-xs font-mono font-bold flex items-center gap-2 transition-all shadow-md active:scale-95">
+          <span>CONTINUE</span>
+          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/translations.js"></script>
+  <script src="../shared/api.js"></script>
+
+  <script>
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    const stepTitles = {
+      1: {
+        title: "Patient Clinical Profile",
+        sub: "Establish primary care record and language preference for Kamala Sharma."
+      },
+      2: {
+        title: "Medication Routine & Schedule",
+        sub: "Configure active prescriptions with automatic audio/visual reminder takeovers."
+      },
+      3: {
+        title: "Family & Emergency Contacts",
+        sub: "Set Priya Sharma as the primary emergency contact for one-touch calling."
+      },
+      4: {
+        title: "Cognitive Training & Launch",
+        sub: "Review clinical protocol and launch the CareLoop caregiver dashboard."
+      }
+    };
+
+    function updateWizardUI() {
+      // Step visibility
+      for (let i = 1; i <= totalSteps; i++) {
+        const pane = document.getElementById('step-' + i);
+        const pill = document.getElementById('step-pill-' + i);
+        if (pane) {
+          if (i === currentStep) {
+            pane.classList.add('active');
+          } else {
+            pane.classList.remove('active');
+          }
+        }
+        if (pill) {
+          if (i === currentStep) {
+            pill.className = "h-7 px-3 rounded-full bg-primary text-canvas font-mono text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer";
+          } else if (i < currentStep) {
+            pill.className = "h-7 px-3 rounded-full bg-primary/20 border border-primary/40 text-primary font-mono text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer";
+          } else {
+            pill.className = "h-7 px-3 rounded-full bg-surface-raised border border-border text-secondary font-mono text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer";
+          }
+        }
+      }
+
+      // Title & Subtitle
+      document.getElementById('step-main-title').textContent = stepTitles[currentStep].title;
+      document.getElementById('step-sub-title').textContent = stepTitles[currentStep].sub;
+
+      // Step counter
+      document.getElementById('step-counter-text').textContent = `Step ${currentStep} of ${totalSteps}`;
+
+      // Back button
+      const backBtn = document.getElementById('btn-back');
+      if (currentStep === 1) {
+        backBtn.classList.add('opacity-40', 'pointer-events-none');
+      } else {
+        backBtn.classList.remove('opacity-40', 'pointer-events-none');
+      }
+
+      // Next / Submit button
+      const nextBtn = document.getElementById('btn-next');
+      if (currentStep === totalSteps) {
+        nextBtn.innerHTML = `<span>LAUNCH DASHBOARD</span><span class="material-symbols-outlined text-[16px]">rocket_launch</span>`;
+        nextBtn.className = "px-6 py-2.5 rounded-xl bg-primary text-canvas hover:bg-primary-hover text-xs font-mono font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 ring-2 ring-primary/30";
+      } else {
+        nextBtn.innerHTML = `<span>CONTINUE</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span>`;
+        nextBtn.className = "px-6 py-2.5 rounded-xl bg-primary text-canvas hover:bg-primary-hover text-xs font-mono font-bold flex items-center gap-2 transition-all shadow-md active:scale-95";
+      }
+
+      // Update review values on step 4
+      if (currentStep === 4) {
+        const pName = document.getElementById('patient-name-input').value.trim() || 'Kamala Sharma';
+        const pDob = document.getElementById('patient-dob-input').value;
+        const pGender = document.getElementById('patient-gender-input').value || 'Female';
+        const eName = document.getElementById('emergency-name-input').value.trim() || 'Priya Sharma';
+        const langSel = document.getElementById('patient-lang-select');
+        const langText = langSel.options[langSel.selectedIndex]?.text.split('(')[0].trim() || 'Hindi';
+
+        let age = 74;
+        if (pDob) {
+          const diff = Date.now() - new Date(pDob).getTime();
+          const calculatedAge = Math.abs(new Date(diff).getUTCFullYear() - 1970);
+          if (!isNaN(calculatedAge) && calculatedAge > 0 && calculatedAge < 120) age = calculatedAge;
+        }
+
+        document.getElementById('summary-patient-name').textContent = pName;
+        document.getElementById('summary-patient-detail').textContent = `Age ${age} · ${pGender} · ${langText}`;
+        document.getElementById('summary-emergency').textContent = eName;
+      }
+    }
+
+    function goToStep(step) {
+      if (step >= 1 && step <= totalSteps) {
+        currentStep = step;
+        updateWizardUI();
+        if (window.soundEffects) soundEffects.play('tap');
+      }
+    }
+
+    function nextStep() {
+      if (currentStep < totalSteps) {
+        currentStep++;
+        updateWizardUI();
+        if (window.soundEffects) soundEffects.play('tap');
+      } else {
+        completeOnboarding();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateWizardUI();
+        if (window.soundEffects) soundEffects.play('tap');
+      }
+    }
+
+    function showAddMedPrompt() {
+      document.getElementById('add-med-form').classList.remove('hidden');
+      document.getElementById('new-med-name').focus();
+    }
+
+    function hideAddMedPrompt() {
+      document.getElementById('add-med-form').classList.add('hidden');
+    }
+
+    function submitNewMed() {
+      const name = document.getElementById('new-med-name').value.trim();
+      const dose = document.getElementById('new-med-dose').value.trim();
+      if (!name) return;
+
+      const container = document.getElementById('med-list-container');
+      const item = document.createElement('div');
+      item.className = "bg-surface-raised border border-border rounded-xl p-3 flex items-center justify-between";
+      item.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            <span class="material-symbols-outlined text-[18px]">pill</span>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-[#F4F6F4]">${name} <span class="text-xs font-mono text-secondary font-normal">${dose || 'Prescribed'}</span></div>
+            <div class="text-[11px] text-secondary">Scheduled daily · Added via Onboarding</div>
+          </div>
+        </div>
+        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">Active</span>
+      `;
+      container.appendChild(item);
+
+      document.getElementById('new-med-name').value = '';
+      document.getElementById('new-med-dose').value = '';
+      hideAddMedPrompt();
+      if (window.soundEffects) soundEffects.play('pop');
+    }
+
+    function completeOnboarding() {
+      const pName = document.getElementById('patient-name-input').value.trim() || 'Kamala Sharma';
+      const pDob = document.getElementById('patient-dob-input').value || '1950-04-12';
+      const pGender = document.getElementById('patient-gender-input').value || 'Female';
+      const eName = document.getElementById('emergency-name-input').value.trim() || 'Priya Sharma';
+      const ePhone = document.getElementById('emergency-phone-input').value.trim() || '+91 98765 43210';
+      const lang = document.getElementById('patient-lang-select').value || 'hi';
+
+      // Persist clinical state to localStorage
+      localStorage.setItem('careloop_patient_name', pName);
+      localStorage.setItem('careloop_patient_dob', pDob);
+      localStorage.setItem('careloop_patient_gender', pGender);
+      localStorage.setItem('careloop_emergency_contact', eName);
+      localStorage.setItem('careloop_emergency_phone', ePhone);
+      localStorage.setItem('careloop_lang', lang);
+      localStorage.setItem('careloop_onboarding_completed', 'true');
+
+      if (window.soundEffects) soundEffects.play('success');
+
+      // Visual feedback on the button
+      const btn = document.getElementById('btn-next');
+      btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>LAUNCHING...</span>`;
+      btn.disabled = true;
+
+      // Broadcast patientUpdated to parent shell
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'patientUpdated',
+          name: pName,
+          gender: pGender,
+          dob: pDob,
+          emergency: eName
+        }, '*');
+      }
+
+      // Broadcast navigate to parent shell if in iframe
+      setTimeout(() => {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'navigate',
+            section: 'dashboard',
+            screen: '09-dashboard-overview.html',
+            title: 'Overview',
+            modeLabel: 'OVERVIEW / 09'
+          }, '*');
+        } else {
+          window.location.href = '09-dashboard-overview.html';
+        }
+      }, 700);
+    }
+
+    // Handle Theme Messages
+    window.addEventListener('message', (e) => {
+      if (!e.data) return;
+      if (e.data.type === 'themeChange') {
+        if (e.data.theme === 'light') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        } else {
+          document.documentElement.classList.remove('light');
+          document.documentElement.classList.add('dark');
+        }
+      }
+    });
+
+    // Initialize Theme
+    const savedTheme = localStorage.getItem('careloop_theme') || 'dark';
+    if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
+
+    // Load saved patient info if any
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedName = localStorage.getItem('careloop_patient_name');
+      if (savedName) {
+        const nameInput = document.getElementById('patient-name-input');
+        if (nameInput) nameInput.value = savedName;
+      }
+      const savedDob = localStorage.getItem('careloop_patient_dob');
+      if (savedDob) {
+        const dobInput = document.getElementById('patient-dob-input');
+        if (dobInput) dobInput.value = savedDob;
+      }
+      const savedGender = localStorage.getItem('careloop_patient_gender');
+      if (savedGender) {
+        const genderInput = document.getElementById('patient-gender-input');
+        if (genderInput) genderInput.value = savedGender;
+      }
+      const savedEmergency = localStorage.getItem('careloop_emergency_contact');
+      if (savedEmergency) {
+        const emInput = document.getElementById('emergency-name-input');
+        if (emInput) emInput.value = savedEmergency;
+      }
+      const savedPhone = localStorage.getItem('careloop_emergency_phone');
+      if (savedPhone) {
+        const phInput = document.getElementById('emergency-phone-input');
+        if (phInput) phInput.value = savedPhone;
+      }
+      const savedLang = localStorage.getItem('careloop_lang');
+      if (savedLang) {
+        const sel = document.getElementById('patient-lang-select');
+        if (sel) sel.value = savedLang;
+      }
+      updateWizardUI();
+
+      // Live synchronization as user types
+      const pInput = document.getElementById('patient-name-input');
+      if (pInput) {
+        pInput.addEventListener('input', (e) => {
+          const val = e.target.value.trim();
+          if (val) {
+            localStorage.setItem('careloop_patient_name', val);
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: 'patientUpdated', name: val }, '*');
+            }
+          }
+        });
+      }
+
+      const emInput = document.getElementById('emergency-name-input');
+      if (emInput) {
+        emInput.addEventListener('input', (e) => {
+          const val = e.target.value.trim();
+          if (val) {
+            localStorage.setItem('careloop_emergency_contact', val);
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+

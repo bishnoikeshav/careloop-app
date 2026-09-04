@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>CareLoop — Family Faces Recall</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="../shared/voiceManager.js"></script>
+  <script src="../shared/gameState.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/api.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #FFFFFF;
+      color: #12201A;
+      user-select: none;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .choice-btn {
+      min-height: 64px;
+      border-radius: 18px;
+      font-size: 19px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border: 2px solid #E3ECE7;
+      background: #F8FAF9;
+      color: #12201A;
+    }
+    .choice-btn:hover {
+      background: #EAF1ED;
+      border-color: #2E9E63;
+      transform: translateY(-2px);
+    }
+    .choice-btn:active {
+      transform: scale(0.97);
+    }
+    .choice-btn.correct {
+      background: #2E9E63 !important;
+      border-color: #2E9E63 !important;
+      color: #FFFFFF !important;
+      transform: scale(1.02);
+      box-shadow: 0 6px 18px rgba(46, 158, 99, 0.3);
+    }
+    .choice-btn.incorrect {
+      background: #FEE8E8 !important;
+      border-color: #D64545 !important;
+      color: #D64545 !important;
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    .pulse-glow {
+      box-shadow: 0 0 0 0 rgba(46, 158, 99, 0.4);
+      animation: pulseGreen 1.8s infinite;
+    }
+    @keyframes pulseGreen {
+      0% { box-shadow: 0 0 0 0 rgba(46, 158, 99, 0.4); }
+      70% { box-shadow: 0 0 0 16px rgba(46, 158, 99, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(46, 158, 99, 0); }
+    }
+  </style>
+</head>
+<body class="p-5 pb-24 overflow-y-auto max-w-[412px] mx-auto w-full flex flex-col justify-between">
+
+  <!-- TOP BAR -->
+  <header class="flex items-center justify-between pb-3 pt-1 border-b border-[#E8EFEA]">
+    <div class="flex items-center gap-3">
+      <button onclick="goBack()" class="w-10 h-10 rounded-full bg-[#F4F7F5] flex items-center justify-center text-[#12201A] active:scale-95 transition-transform" title="Back to games">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-[#12201A]">Family Faces</h1>
+        <p class="text-xs text-[#527863] font-medium">Recognize your loved ones</p>
+      </div>
+    </div>
+
+    <!-- Round Progress -->
+    <div class="flex items-center gap-1.5" id="round-dots">
+      <!-- 4 dots rendered via JS -->
+    </div>
+  </header>
+
+  <!-- MAIN GAME AREA -->
+  <main class="flex-1 flex flex-col items-center justify-center my-4 text-center">
+
+    <!-- PHOTO CARD -->
+    <div class="w-48 h-48 sm:w-52 sm:h-52 rounded-3xl overflow-hidden shadow-md border-4 border-white mb-4 relative bg-[#F4F7F5]">
+      <img id="family-photo" src="" alt="Family member" class="w-full h-full object-cover transition-opacity duration-300"/>
+      <!-- Soft badge hint -->
+      <div id="relation-hint" class="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs py-1 px-2 rounded-xl font-medium">
+        Relationship clue
+      </div>
+    </div>
+
+    <h2 class="text-xl font-bold text-[#12201A] mb-1">Who is this person?</h2>
+    <p class="text-xs text-[#6B8C7A] mb-5 font-medium">Tap their name below</p>
+
+    <!-- 4 CHOICE BUTTONS (2x2 grid for generous touch targets) -->
+    <div class="grid grid-cols-2 gap-3 w-full max-w-sm" id="choices-container">
+      <!-- 4 buttons dynamically populated -->
+    </div>
+  </main>
+
+  <!-- FOOTER STATUS -->
+  <footer class="text-center py-2">
+    <p class="text-xs text-[#6B8C7A] font-medium" id="status-text">
+      Take your time. There is no rush.
+    </p>
+  </footer>
+
+  <!-- COMPLETION MODAL -->
+  <div id="celebration-overlay" class="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div class="w-20 h-20 bg-[#2E9E63] rounded-full flex items-center justify-center text-white mb-5 shadow-lg pulse-glow">
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+    </div>
+
+    <h2 class="text-3xl font-bold text-[#12201A] mb-2 tracking-tight">Heartwarming!</h2>
+    <p class="text-base text-[#527863] max-w-xs mb-6 leading-relaxed">
+      You successfully recognized your family and care team. Keeping these memories close strengthens your bonds.
+    </p>
+
+    <div class="bg-[#F4F7F5] border border-[#DCE5E0] rounded-2xl p-4 w-full max-w-xs mb-6 flex justify-around">
+      <div>
+        <div class="text-2xl font-bold text-[#2E9E63]" id="summary-score">4/4</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-semibold">Correct</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-bold text-[#12201A]" id="summary-time">24s</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-semibold">Time</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-bold text-[#2E9E63]" id="summary-cas">94</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-semibold">CAS Score</div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 w-full max-w-xs">
+      <button onclick="startSession()" class="w-full h-14 bg-[#2E9E63] hover:bg-[#258552] text-white rounded-2xl font-semibold text-lg shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+        <span>Play Again</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+      <button onclick="goBack()" class="w-full h-12 bg-[#F4F7F5] hover:bg-[#EAF1ED] text-[#12201A] border border-[#DCE5E0] rounded-2xl font-medium text-base transition-all active:scale-[0.98]">
+        Back to Games Hub
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Default fallback members
+    const DEFAULT_FAMILY_MEMBERS = [
+      {
+        id: 'priya',
+        name: 'Priya Sharma',
+        relationship: 'Your Daughter',
+        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500&auto=format&fit=crop&q=80',
+        distractors: ['Sunita Devi', 'Ananya', 'Meena']
+      },
+      {
+        id: 'bose',
+        name: 'Dr. Ravi Bose',
+        relationship: 'Your Doctor',
+        avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=500&auto=format&fit=crop&q=80',
+        distractors: ['Dr. Verma', 'Suresh', 'Mr. Paul']
+      },
+      {
+        id: 'ramesh',
+        name: 'Ramesh Sharma',
+        relationship: 'Your Son',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
+        distractors: ['Dr. Ravi Bose', 'Vikram', 'Priya']
+      },
+      {
+        id: 'meena',
+        name: 'Meena Devi',
+        relationship: 'Your Sister',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=500&auto=format&fit=crop&q=80',
+        distractors: ['Priya Sharma', 'Kavita', 'Sita']
+      }
+    ];
+
+    function getActiveFamilyMembers() {
+      try {
+        const raw = localStorage.getItem('careloop_family_members');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const active = parsed.filter(m => m.includeInGames !== false && m.name);
+          if (active.length >= 2) {
+            // Build dynamic rounds with distractors from other members in the vault
+            const allNames = active.map(m => m.name);
+            const fallbackNames = ['Ananya', 'Sunita', 'Vikram', 'Kavita', 'Sita'];
+            return active.map(m => {
+              const otherNames = allNames.filter(n => n !== m.name);
+              const pool = [...otherNames, ...fallbackNames];
+              const distractors = pool.sort(() => Math.random() - 0.5).slice(0, 3);
+              return {
+                id: m.id || m.name.toLowerCase().replace(/\s+/g, '_'),
+                name: m.name,
+                relationship: m.relationship ? (m.relationship.startsWith('Your') ? m.relationship : `Your ${m.relationship}`) : 'Your Family Member',
+                avatar: m.photoUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=500&auto=format&fit=crop&q=80',
+                distractors: distractors
+              };
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load family members from localStorage:', e);
+      }
+      return DEFAULT_FAMILY_MEMBERS;
+    }
+
+    let currentRound = 0;
+    let rounds = [];
+    let correctCount = 0;
+    let isAnswering = false;
+    let startTime = null;
+
+    function startSession() {
+      const members = getActiveFamilyMembers();
+      rounds = [...members].sort(() => Math.random() - 0.5);
+      currentRound = 0;
+      correctCount = 0;
+      isAnswering = false;
+      startTime = Date.now();
+
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+
+      renderRoundDots();
+      loadRound(0);
+    }
+
+    function renderRoundDots() {
+      const dotsContainer = document.getElementById('round-dots');
+      dotsContainer.innerHTML = '';
+      for (let i = 0; i < rounds.length; i++) {
+        const dot = document.createElement('div');
+        dot.className = `w-2 h-2 rounded-full transition-all duration-300 ${i < currentRound ? 'bg-[#2E9E63]' : i === currentRound ? 'bg-[#2E9E63] scale-125' : 'bg-[#DCE5E0]'}`;
+        dotsContainer.appendChild(dot);
+      }
+    }
+
+    function loadRound(idx) {
+      if (idx >= rounds.length) {
+        handleCompletion();
+        return;
+      }
+
+      currentRound = idx;
+      renderRoundDots();
+      isAnswering = false;
+
+      const target = rounds[idx];
+      document.getElementById('family-photo').src = target.avatar;
+      document.getElementById('relation-hint').textContent = target.relationship;
+      document.getElementById('status-text').textContent = "Tap the name that matches the photo";
+
+      // Prepare 4 choices: target name + 3 distractors, shuffled
+      const options = [target.name, ...target.distractors].sort(() => Math.random() - 0.5);
+
+      const choicesBox = document.getElementById('choices-container');
+      choicesBox.innerHTML = '';
+
+      options.forEach(name => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = name;
+        btn.onclick = () => handleChoice(name, target.name, btn);
+        choicesBox.appendChild(btn);
+      });
+    }
+
+    function handleChoice(chosenName, correctName, btnElement) {
+      if (isAnswering) return;
+      isAnswering = true;
+
+      const allBtns = document.querySelectorAll('.choice-btn');
+      allBtns.forEach(b => b.disabled = true);
+
+      if (chosenName === correctName) {
+        // Correct!
+        correctCount++;
+        btnElement.classList.add('correct');
+        if (window.careLoopSound) window.careLoopSound.playMatch();
+        document.getElementById('status-text').textContent = `Yes! That is ${correctName}. Wonderful!`;
+
+        setTimeout(() => {
+          loadRound(currentRound + 1);
+        }, 1200);
+
+      } else {
+        // Incorrect
+        btnElement.classList.add('incorrect');
+        if (window.careLoopSound) window.careLoopSound.playMismatch();
+
+        // Highlight correct one softly to reinforce memory without shame
+        allBtns.forEach(b => {
+          if (b.textContent === correctName) {
+            b.classList.add('correct');
+          }
+        });
+
+        document.getElementById('status-text').textContent = `This is ${correctName} (${rounds[currentRound].relationship})`;
+
+        setTimeout(() => {
+          loadRound(currentRound + 1);
+        }, 1800);
+      }
+    }
+
+    function handleCompletion() {
+      const elapsedSec = Math.max(10, Math.round((Date.now() - startTime) / 1000));
+      const accuracy = Math.round((correctCount / rounds.length) * 100);
+      const casScore = Math.min(99, Math.round((accuracy * 0.7) + (Math.max(10, 100 - elapsedSec) * 0.3)));
+
+      document.getElementById('summary-score').textContent = `${correctCount}/${rounds.length}`;
+      document.getElementById('summary-time').textContent = elapsedSec + 's';
+      document.getElementById('summary-cas').textContent = casScore;
+
+      if (window.careLoopSound) {
+        setTimeout(() => window.careLoopSound.playMatch(), 200);
+      }
+
+      // Record in backend
+      if (window.careLoopApi) {
+        window.careLoopApi.recordGame({
+          gameType: 'family-faces',
+          gameTitle: 'Family Faces Recall',
+          accuracy,
+          durationSec: elapsedSec,
+          moves: rounds.length
+        });
+      }
+
+      if (window.CareLoopGameState) {
+        window.CareLoopGameState.addResult({
+          gameName: 'Family Faces Recall',
+          gameType: 'family-faces',
+          score: accuracy,
+          durationSec: elapsedSec,
+          moves: rounds.length
+        });
+      }
+
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function goBack() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      window.location.href = '03-cognitive-games-hub.html';
+      window.parent.postMessage({
+        type: 'navigate',
+        route: { role: 'patient', file: '03-cognitive-games-hub.html', id: '03' }
+      }, '*');
+    }
+
+    window.addEventListener('beforeunload', () => {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+    });
+
+    window.addEventListener('DOMContentLoaded', startSession);
+  </script>
+</body>
+</html>

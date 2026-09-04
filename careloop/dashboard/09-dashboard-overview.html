@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CareLoop Caregiver Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<script src="../shared/gameState.js"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline": "#869489",
+                        "secondary": "#9ccaff",
+                        "on-secondary-fixed": "#001d35",
+                        "surface-tint": "#4cdf95",
+                        "error-container": "#93000a",
+                        "primary-fixed": "#6dfdaf",
+                        "primary-container": "#4ade94",
+                        "surface-container-lowest": "#0d0f0e",
+                        "on-error": "#690005",
+                        "inverse-surface": "#e2e3e0",
+                        "surface-container-high": "#282a29",
+                        "secondary-fixed-dim": "#9ccaff",
+                        "surface-container-highest": "#333534",
+                        "on-tertiary-fixed": "#121e1a",
+                        "primary": "#6bfbae",
+                        "on-primary-container": "#005e38",
+                        "on-tertiary-container": "#48544f",
+                        "on-primary-fixed-variant": "#005230",
+                        "on-tertiary-fixed-variant": "#3d4945",
+                        "secondary-fixed": "#d0e4ff",
+                        "surface-container": "#1e201f",
+                        "tertiary-fixed": "#d8e6df",
+                        "tertiary": "#d7e4dd",
+                        "on-secondary-container": "#e8f1ff",
+                        "tertiary-container": "#bbc8c2",
+                        "on-primary-fixed": "#002110",
+                        "on-background": "#e2e3e0",
+                        "background": "#121413",
+                        "surface-bright": "#383a38",
+                        "surface-dim": "#121413",
+                        "on-tertiary": "#27332f",
+                        "on-secondary-fixed-variant": "#00497b",
+                        "secondary-container": "#0071b9",
+                        "primary-fixed-dim": "#4cdf95",
+                        "on-surface": "#e2e3e0",
+                        "inverse-primary": "#006d41",
+                        "inverse-on-surface": "#2f312f",
+                        "surface-container-low": "#1a1c1b",
+                        "on-error-container": "#ffdad6",
+                        "on-surface-variant": "#bbcabd",
+                        "on-secondary": "#003257",
+                        "error": "#ffb4ab",
+                        "on-primary": "#003920",
+                        "tertiary-fixed-dim": "#bcc9c3",
+                        "outline-variant": "#3c4a40",
+                        "surface-variant": "#333534",
+                        "surface": "#121413"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        "container-margin": "24px",
+                        "stack-md": "16px",
+                        "gutter": "16px",
+                        "stack-lg": "32px",
+                        "stack-sm": "8px",
+                        "unit": "4px"
+                    },
+                    fontFamily: {
+                        "headline-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "mono-data": ["JetBrains Mono"]
+                    },
+                    fontSize: {
+                        "headline-sm": ["18px", { lineHeight: "1.4", fontWeight: "500" }],
+                        "headline-md": ["24px", { lineHeight: "1.3", fontWeight: "600" }],
+                        "body-sm": ["13px", { lineHeight: "1.5", fontWeight: "400" }],
+                        "body-lg": ["16px", { lineHeight: "1.6", fontWeight: "400" }],
+                        "label-caps": ["11px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "500" }],
+                        "headline-lg-mobile": ["24px", { lineHeight: "1.2", fontWeight: "600" }],
+                        "display-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "600" }],
+                        "body-md": ["14px", { lineHeight: "1.5", fontWeight: "400" }],
+                        "mono-data": ["13px", { lineHeight: "1.4", fontWeight: "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0B0D0C;
+            color: #F4F6F4;
+        }
+        /* Hide scrollbar for clean aesthetic */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #26302C;
+            border-radius: 4px;
+        }
+        /* When embedded in master shell, hide redundant inner sidebar and top header */
+        aside { display: none !important; }
+        .main-wrapper { margin-left: 0 !important; }
+        html.light body, html.light {
+            background-color: #F8FAF8 !important;
+            color: #12201A !important;
+        }
+        html.light header {
+            background-color: #FFFFFF !important;
+            border-color: #DCE5E0 !important;
+        }
+        html.light main {
+            background-color: #F8FAF8 !important;
+        }
+        html.light .bg-\[\#121514\] {
+            background-color: #FFFFFF !important;
+            border-color: #DCE5E0 !important;
+        }
+        html.light .bg-\[\#1A1E1C\] {
+            background-color: #F0F4F2 !important;
+            border-color: #DCE5E0 !important;
+        }
+        html.light .border-\[\#26302C\] {
+            border-color: #DCE5E0 !important;
+        }
+        html.light .text-on-surface {
+            color: #12201A !important;
+        }
+        html.light .text-on-surface-variant {
+            color: #527863 !important;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen overflow-y-auto antialiased bg-[#0B0D0C] text-[#F4F6F4]">
+
+<!-- PATIENT PROFILE & CLINICAL CONTEXT BAR -->
+<!-- PATIENT PROFILE & CLINICAL CONTEXT BAR -->
+<header class="flex flex-wrap justify-between items-center px-6 py-3.5 w-full bg-[#121514] border-b border-[#26302C] sticky top-0 z-30 gap-4">
+  <div class="flex items-center gap-3.5">
+    <div class="w-11 h-11 rounded-full bg-[#1A1E1C] border-2 border-[#4ADE94] overflow-hidden flex items-center justify-center text-[#4ADE94] shadow-sm font-bold font-mono text-sm" id="patient-avatar-badge">
+      KS
+    </div>
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="font-bold text-xl text-[#F4F6F4] tracking-tight" id="patient-name-display">Kamala Sharma</h1>
+        <span class="bg-[#4ADE94]/15 text-[#4ADE94] text-[11px] font-mono px-2 py-0.5 rounded-full border border-[#4ADE94]/30 font-semibold">• ACTIVE PATIENT</span>
+        <button onclick="parentNavigate('08b-auth-onboarding-wizard.html','Onboarding Wizard','ONBOARD / 08B')" class="text-xs text-[#9BA8A2] hover:text-[#4ADE94] flex items-center gap-0.5 ml-1.5 transition-colors cursor-pointer py-0.5 px-1.5 rounded hover:bg-[#1A1E1C]" title="Edit in Onboarding Wizard">
+          <span class="material-symbols-outlined text-[15px]">edit</span> Edit
+        </button>
+      </div>
+      <p class="text-xs text-[#9BA8A2]" id="patient-profile-subtitle">Age 74 · Female · Protocol: Mild Cognitive Impairment (MCI) Monitoring · ID: #CL-8821</p>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1A1E1C] border border-[#26302C]">
+      <span class="material-symbols-outlined text-[#9BA8A2] text-[16px]">badge</span>
+      <span class="text-xs text-[#9BA8A2]">Caregiver: <strong class="text-[#F4F6F4]">Rahul K.</strong></span>
+    </div>
+    <button onclick="triggerManualSync(this)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5AA9F5]/10 border border-[#5AA9F5]/30 hover:bg-[#5AA9F5]/20 text-[#5AA9F5] transition-all cursor-pointer group" title="Click to synchronize with companion tablet">
+      <span class="material-symbols-outlined text-[#5AA9F5] text-[15px] group-hover:rotate-180 transition-transform duration-500" id="sync-icon">sync</span>
+      <span class="font-mono text-[11px]" id="sync-text">Synced 2m ago</span>
+    </button>
+  </div>
+</header>
+
+<!-- MAIN DASHBOARD CONTENT -->
+<main class="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
+
+  <!-- ROW 1: 4 STAT BLOCKS (Interactive Clickable Cards) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Card 1: Adherence -->
+    <div onclick="parentNavigate('10-medication-manager.html', 'Medication', 'MEDICATION / 10')" class="bg-[#121514] border border-[#26302C] hover:border-[#4ADE94]/50 rounded-xl p-5 flex flex-col relative overflow-hidden cursor-pointer group transition-all shadow-sm hover:shadow-[0_4px_20px_rgba(74,222,148,0.1)]">
+      <div class="flex justify-between items-start mb-2">
+        <span class="font-mono text-[11px] text-[#9BA8A2] group-hover:text-[#4ADE94] uppercase tracking-wider font-semibold transition-colors">ADHERENCE / 01</span>
+        <span class="material-symbols-outlined text-[#4ADE94] text-[20px] group-hover:scale-110 transition-transform">medication</span>
+      </div>
+      <div class="flex items-baseline gap-2 mt-auto">
+        <span class="text-3xl font-bold text-[#F4F6F4] font-mono" id="stat-adherence-num">87</span>
+        <span class="text-xs text-[#9BA8A2]">% this week</span>
+      </div>
+      <div class="mt-3 w-full h-1.5 bg-[#1A1E1C] rounded-full overflow-hidden">
+        <div class="h-full bg-[#4ADE94] rounded-full" id="stat-adherence-bar" style="width: 87%"></div>
+      </div>
+      <span class="text-[10px] text-[#4ADE94] mt-2 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex items-center gap-1">
+        Open Medication Manager →
+      </span>
+    </div>
+
+    <!-- Card 2: Cognitive Activity Score -->
+    <div onclick="parentNavigate('11-cognitive-analytics.html', 'Games & Cognitive', 'COGNITIVE / 11')" class="bg-[#121514] border border-[#26302C] hover:border-[#5AA9F5]/50 rounded-xl p-5 flex flex-col relative overflow-hidden cursor-pointer group transition-all shadow-sm hover:shadow-[0_4px_20px_rgba(90,169,245,0.1)]">
+      <div class="flex justify-between items-start mb-2">
+        <span class="font-mono text-[11px] text-[#9BA8A2] group-hover:text-[#5AA9F5] uppercase tracking-wider font-semibold transition-colors">CAS SCORE / 02</span>
+        <span class="material-symbols-outlined text-[#5AA9F5] text-[20px] group-hover:scale-110 transition-transform">psychology</span>
+      </div>
+      <div class="flex items-baseline gap-2 mt-auto">
+        <span class="text-3xl font-bold text-[#4ADE94] font-mono" id="cas-overview-value">84.5</span>
+        <span class="text-xs text-[#9BA8A2]" id="cas-overview-sub">↑4.2 pts above base</span>
+      </div>
+      <div class="mt-3 text-[11px] text-[#9BA8A2] flex items-center gap-1 font-medium">
+        <span class="text-[#4ADE94]">●</span> Steady retention rate
+      </div>
+      <span class="text-[10px] text-[#5AA9F5] mt-2 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex items-center gap-1">
+        View Cognitive Analytics →
+      </span>
+    </div>
+
+    <!-- Card 3: Active Routine Streak -->
+    <div onclick="openStreakModal()" class="bg-[#121514] border border-[#26302C] hover:border-[#F5B942]/50 rounded-xl p-5 flex flex-col relative overflow-hidden cursor-pointer group transition-all shadow-sm hover:shadow-[0_4px_20px_rgba(245,185,66,0.1)]">
+      <div class="flex justify-between items-start mb-2">
+        <span class="font-mono text-[11px] text-[#9BA8A2] group-hover:text-[#F5B942] uppercase tracking-wider font-semibold transition-colors">DAILY STREAK / 03</span>
+        <span class="material-symbols-outlined text-[#F5B942] text-[20px] group-hover:scale-110 transition-transform">local_fire_department</span>
+      </div>
+      <div class="flex items-baseline gap-2 mt-auto">
+        <span class="text-3xl font-bold text-[#F4F6F4] font-mono">12</span>
+        <span class="text-xs text-[#9BA8A2]">days in a row</span>
+      </div>
+      <div class="mt-3 text-[11px] text-[#9BA8A2] flex items-center gap-1 font-medium">
+        <span class="text-[#F5B942]">●</span> Active daily completion
+      </div>
+      <span class="text-[10px] text-[#F5B942] mt-2 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex items-center gap-1">
+        Click for Streak Details →
+      </span>
+    </div>
+
+    <!-- Card 4: Response Latency -->
+    <div onclick="switchChartMetric('speed'); document.getElementById('chart-container').scrollIntoView({ behavior: 'smooth' });" class="bg-[#121514] border border-[#26302C] hover:border-[#7FE0AC]/50 rounded-xl p-5 flex flex-col relative overflow-hidden cursor-pointer group transition-all shadow-sm hover:shadow-[0_4px_20px_rgba(127,224,172,0.1)]">
+      <div class="flex justify-between items-start mb-2">
+        <span class="font-mono text-[11px] text-[#9BA8A2] group-hover:text-[#7FE0AC] uppercase tracking-wider font-semibold transition-colors">REACTION SPEED / 04</span>
+        <span class="material-symbols-outlined text-[#7FE0AC] text-[20px] group-hover:scale-110 transition-transform">timer</span>
+      </div>
+      <div class="flex items-baseline gap-2 mt-auto">
+        <span class="text-3xl font-bold text-[#F4F6F4] font-mono">3.8s</span>
+        <span class="text-xs text-[#9BA8A2]">avg in Memory Match</span>
+      </div>
+      <div class="mt-3 text-[11px] text-[#9BA8A2] flex items-center gap-1 font-medium">
+        <span class="text-[#4ADE94]">●</span> 0.4s faster than baseline
+      </div>
+      <span class="text-[10px] text-[#7FE0AC] mt-2 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex items-center gap-1">
+        Plot Response Curve ↓
+      </span>
+    </div>
+  </div>
+
+  <!-- ROW 2: PATIENT PERFORMANCE ANALYSIS GRAPH -->
+  <section class="bg-[#121514] border border-[#26302C] rounded-2xl p-6 shadow-sm relative">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[#26302C]">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="font-mono text-[10px] text-[#4ADE94] bg-[#4ADE94]/10 border border-[#4ADE94]/30 px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
+            ANALYTICS / 02
+          </span>
+          <span class="text-xs text-[#9BA8A2] font-medium">Longitudinal Tracking</span>
+        </div>
+        <h2 class="text-xl font-bold text-[#F4F6F4] tracking-tight">Patient Cognitive &amp; Performance Trend</h2>
+        <p class="text-xs text-[#9BA8A2] mt-0.5">Tracking Kamala Sharma's Cognitive Activity Score (CAS), adherence, and response speed</p>
+      </div>
+
+      <!-- Controls: Metric Toggle & Period Selector -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <!-- Metric Buttons -->
+        <div class="inline-flex bg-[#1A1E1C] p-1 rounded-xl border border-[#26302C]">
+          <button onclick="switchChartMetric('cas')" id="btn-metric-cas" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#4ADE94] text-[#0B0D0C] shadow transition-all">
+            CAS Score
+          </button>
+          <button onclick="switchChartMetric('adherence')" id="btn-metric-adherence" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#9BA8A2] hover:text-[#F4F6F4] transition-all">
+            Adherence %
+          </button>
+          <button onclick="switchChartMetric('speed')" id="btn-metric-speed" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#9BA8A2] hover:text-[#F4F6F4] transition-all">
+            Response Speed
+          </button>
+        </div>
+
+        <!-- Time Range Buttons -->
+        <div class="inline-flex bg-[#1A1E1C] p-1 rounded-xl border border-[#26302C]">
+          <button onclick="switchChartRange(7)" id="btn-range-7" class="px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-[#26302C] text-[#F4F6F4] transition-all">
+            7D
+          </button>
+          <button onclick="switchChartRange(14)" id="btn-range-14" class="px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold text-[#9BA8A2] hover:text-[#F4F6F4] transition-all">
+            14D
+          </button>
+          <button onclick="switchChartRange(30)" id="btn-range-30" class="px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold text-[#9BA8A2] hover:text-[#F4F6F4] transition-all">
+            30D
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart Canvas Container -->
+    <div class="relative pt-6 pb-2">
+      <!-- Interactive SVG Chart -->
+      <div class="w-full h-[220px] overflow-hidden" id="chart-container">
+        <!-- Injected via JavaScript renderPerformanceChart() -->
+      </div>
+
+      <!-- Interactive Hover Tooltip Box -->
+      <div id="chart-tooltip" class="absolute hidden bg-[#1A1E1C] border border-[#4ADE94] p-3 rounded-xl shadow-xl pointer-events-none z-20 w-52 transition-all">
+        <div class="text-[11px] font-mono text-[#9BA8A2] border-b border-[#26302C] pb-1 mb-1 font-semibold" id="tooltip-date">Date</div>
+        <div class="text-base font-bold text-[#F4F6F4] font-mono" id="tooltip-val">Score</div>
+        <div class="text-[11px] text-[#4ADE94] mt-0.5 font-medium" id="tooltip-sub">Accuracy / Status</div>
+      </div>
+    </div>
+
+    <!-- Clinical Performance Summary Strip -->
+    <div class="mt-4 pt-4 border-t border-[#26302C] grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-[#4ADE94]/10 border border-[#4ADE94]/30 flex items-center justify-center text-[#4ADE94]">
+          <span class="material-symbols-outlined text-[18px]">verified</span>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-[#F4F6F4]">Baseline Stability: +5.2%</div>
+          <div class="text-[11px] text-[#9BA8A2]">Cognitive scores safely within target corridor</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-[#38BDF8]/10 border border-[#38BDF8]/30 flex items-center justify-center text-[#38BDF8]">
+          <span class="material-symbols-outlined text-[18px]">event_available</span>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-[#F4F6F4]">Protocol Consistency: 91.4%</div>
+          <div class="text-[11px] text-[#9BA8A2]">Active daily routines on Kamala's tablet</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-[#F5B942]/10 border border-[#F5B942]/30 flex items-center justify-center text-[#F5B942]">
+          <span class="material-symbols-outlined text-[18px]">speed</span>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-[#F4F6F4]">Cognitive Cadence: Normal</div>
+          <div class="text-[11px] text-[#9BA8A2]">No motor or recognition delay detected</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROW 3: RECENT TIMELINE (60%) & ACTIONABLE ANOMALY ALERTS (40%) -->
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+    <!-- Left Panel: Recent Timeline (60%) -->
+    <div class="lg:col-span-3 bg-[#121514] border border-[#26302C] rounded-2xl flex flex-col p-5">
+      <div class="flex justify-between items-center pb-4 border-b border-[#26302C]">
+        <div>
+          <span class="font-mono text-[10px] text-[#9BA8A2] uppercase tracking-wider font-semibold">ACTIVITY / 05</span>
+          <h2 class="text-lg font-bold text-[#F4F6F4] mt-0.5">Recent Patient Timeline</h2>
+        </div>
+        <span class="text-xs text-[#9BA8A2] font-mono" id="patient-timeline-name">Kamala Sharma</span>
+      </div>
+
+      <div class="flex-1 py-4 space-y-2">
+        <!-- Item 1: Medication -->
+        <div onclick="parentNavigate('10-medication-manager.html', 'Medication', 'MEDICATION / 10')" class="flex items-start gap-3.5 p-2.5 rounded-xl hover:bg-[#1A1E1C] cursor-pointer transition-all group">
+          <div class="w-8 h-8 rounded-full bg-[#1A1E1C] group-hover:bg-[#121514] border border-[#26302C] flex items-center justify-center text-[#4ADE94] shrink-0 mt-0.5">
+            <span class="material-symbols-outlined text-[18px]">pill</span>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <p class="font-semibold text-sm text-[#F4F6F4] group-hover:text-[#4ADE94] transition-colors">Morning Medication Confirmed</p>
+              <span class="text-[11px] text-[#9BA8A2] font-mono">Today, 8:05 AM</span>
+            </div>
+            <p class="text-xs text-[#9BA8A2] mt-0.5">Metformin 500mg, Lisinopril 10mg taken on schedule</p>
+          </div>
+        </div>
+
+        <!-- Item 2: Memory Match -->
+        <div onclick="parentNavigate('11-cognitive-analytics.html', 'Games & Cognitive', 'COGNITIVE / 11')" class="flex items-start gap-3.5 p-2.5 rounded-xl hover:bg-[#1A1E1C] cursor-pointer transition-all group">
+          <div class="w-8 h-8 rounded-full bg-[#1A1E1C] group-hover:bg-[#121514] border border-[#26302C] flex items-center justify-center text-[#38BDF8] shrink-0 mt-0.5">
+            <span class="material-symbols-outlined text-[18px]">sports_esports</span>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <p class="font-semibold text-sm text-[#F4F6F4] group-hover:text-[#38BDF8] transition-colors">Completed Memory Match Session</p>
+              <span class="text-[11px] text-[#9BA8A2] font-mono">Today, 7:45 AM</span>
+            </div>
+            <p class="text-xs text-[#9BA8A2] mt-0.5">Accuracy: 92% · Response Time: 3.8s · CAS +1.4</p>
+          </div>
+        </div>
+
+        <!-- Item 3: Calling -->
+        <div onclick="parentNavigate('14-family-calling-management.html', 'Calling', 'CALLING / 14')" class="flex items-start gap-3.5 p-2.5 rounded-xl hover:bg-[#1A1E1C] cursor-pointer transition-all group">
+          <div class="w-8 h-8 rounded-full bg-[#1A1E1C] group-hover:bg-[#121514] border border-[#26302C] flex items-center justify-center text-[#4ADE94] shrink-0 mt-0.5">
+            <span class="material-symbols-outlined text-[18px]">call</span>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <p class="font-semibold text-sm text-[#F4F6F4] group-hover:text-[#4ADE94] transition-colors">One-Touch Call with Daughter Priya</p>
+              <span class="text-[11px] text-[#9BA8A2] font-mono">Yesterday, 6:12 PM</span>
+            </div>
+            <p class="text-xs text-[#9BA8A2] mt-0.5">Call duration: 3 min 42 sec · Audio clean and responsive</p>
+          </div>
+        </div>
+
+        <!-- Item 4: Voice AI -->
+        <div onclick="showVoiceAiTranscriptModal()" class="flex items-start gap-3.5 p-2.5 rounded-xl hover:bg-[#1A1E1C] cursor-pointer transition-all group">
+          <div class="w-8 h-8 rounded-full bg-[#1A1E1C] group-hover:bg-[#121514] border border-[#26302C] flex items-center justify-center text-[#F5B942] shrink-0 mt-0.5">
+            <span class="material-symbols-outlined text-[18px]">mic</span>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <p class="font-semibold text-sm text-[#F4F6F4] group-hover:text-[#F5B942] transition-colors">Bilingual Voice AI Interaction</p>
+              <span class="text-[11px] text-[#9BA8A2] font-mono">Yesterday, 11:20 AM</span>
+            </div>
+            <p class="text-xs text-[#9BA8A2] mt-0.5">Asked: "दवाई का समय क्या है?" (Tap to view full transcript)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline Footer Link -->
+      <div class="pt-3.5 border-t border-[#26302C] mt-auto">
+        <button onclick="parentNavigate('11-cognitive-analytics.html', 'Games & Cognitive', 'COGNITIVE / 11')" class="text-xs font-semibold text-[#4ADE94] hover:text-[#38c47d] flex items-center gap-1.5 transition-colors cursor-pointer">
+          <span>View Full Activity Analytics</span>
+          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Panel: Alerts (40%) -->
+    <div class="lg:col-span-2 bg-[#121514] border border-[#26302C] rounded-2xl flex flex-col p-5">
+      <div class="flex justify-between items-center pb-4 border-b border-[#26302C]">
+        <div>
+          <span class="font-mono text-[10px] text-[#9BA8A2] uppercase tracking-wider font-semibold">ALERTS / 06</span>
+          <h2 class="text-lg font-bold text-[#F4F6F4] mt-0.5">Anomaly &amp; Care Alerts</h2>
+        </div>
+        <span id="pending-alerts-badge" class="bg-[#EF5A5A]/20 text-[#EF5A5A] text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border border-[#EF5A5A]/30">1 PENDING</span>
+      </div>
+
+      <div class="flex-1 py-4 space-y-3.5">
+        <!-- Alert 1 (Warn) -->
+        <div class="bg-[#1A1E1C] border-l-4 border-l-[#F5B942] border-y border-r border-[#26302C] p-4 rounded-r-xl">
+          <div class="flex items-start gap-2.5">
+            <span class="material-symbols-outlined text-[#F5B942] text-[18px] mt-0.5">warning</span>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <p class="font-bold text-sm text-[#F4F6F4]">Evening Dose Snoozed Once</p>
+                <span class="text-[10px] font-mono text-[#F5B942]">SNOOZED</span>
+              </div>
+              <p class="text-xs text-[#9BA8A2] mt-1">Patient snoozed Lisinopril 10mg once before taking at 8:15 PM.</p>
+              <button onclick="markAlertReviewed(this, 'alert-01')" id="btn-review-01" class="mt-2.5 px-3 py-1 bg-[#121514] border border-[#26302C] rounded-lg text-xs font-semibold text-[#F4F6F4] hover:bg-[#26302C] hover:border-[#4ADE94]/50 transition-all cursor-pointer">
+                Mark Reviewed
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alert 2 (Info) -->
+        <div class="bg-[#1A1E1C] border-l-4 border-l-[#4ADE94] border-y border-r border-[#26302C] p-4 rounded-r-xl">
+          <div class="flex items-start gap-2.5">
+            <span class="material-symbols-outlined text-[#4ADE94] text-[18px] mt-0.5">check_circle</span>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <p class="font-bold text-sm text-[#F4F6F4]">Device Synced &amp; Normal</p>
+                <span class="text-[10px] font-mono text-[#4ADE94]">STABLE</span>
+              </div>
+              <p class="text-xs text-[#9BA8A2] mt-1" id="patient-device-status">Kamala's companion tablet is online with optimal battery (88%).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerts Footer Link -->
+      <div class="pt-3.5 border-t border-[#26302C] mt-auto">
+        <button onclick="parentNavigate('13-alerts-anomaly-detection.html', 'Alerts', 'ALERTS / 13')" class="text-xs font-semibold text-[#4ADE94] hover:text-[#38c47d] flex items-center gap-1.5 transition-colors cursor-pointer">
+          <span>View All Alerts &amp; Logs</span>
+          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- STREAK MODAL (Hidden by default) -->
+  <div id="streak-modal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#121514] border border-[#26302C] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-[#26302C]">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[#F5B942] text-[24px]">local_fire_department</span>
+          <h3 class="text-lg font-bold text-[#F4F6F4]">12-Day Protocol Streak</h3>
+        </div>
+        <button onclick="closeStreakModal()" class="text-[#9BA8A2] hover:text-[#F4F6F4] p-1 rounded-lg">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <p class="text-xs text-[#9BA8A2]">Patient has completed daily cognitive exercises and confirmed all scheduled doses consecutively for 12 days.</p>
+
+      <div class="grid grid-cols-6 gap-2 py-2">
+        <div class="p-2 rounded-lg bg-[#1A1E1C] border border-[#4ADE94]/40 text-center">
+          <div class="text-[10px] font-mono text-[#9BA8A2]">D-12</div>
+          <span class="material-symbols-outlined text-[18px] text-[#4ADE94]">check_circle</span>
+        </div>
+        <div class="p-2 rounded-lg bg-[#1A1E1C] border border-[#4ADE94]/40 text-center">
+          <div class="text-[10px] font-mono text-[#9BA8A2]">D-11</div>
+          <span class="material-symbols-outlined text-[18px] text-[#4ADE94]">check_circle</span>
+        </div>
+        <div class="p-2 rounded-lg bg-[#1A1E1C] border border-[#4ADE94]/40 text-center">
+          <div class="text-[10px] font-mono text-[#9BA8A2]">D-10</div>
+          <span class="material-symbols-outlined text-[18px] text-[#4ADE94]">check_circle</span>
+        </div>
+        <div class="p-2 rounded-lg bg-[#1A1E1C] border border-[#4ADE94]/40 text-center">
+          <div class="text-[10px] font-mono text-[#9BA8A2]">D-09</div>
+          <span class="material-symbols-outlined text-[18px] text-[#4ADE94]">check_circle</span>
+        </div>
+        <div class="p-2 rounded-lg bg-[#1A1E1C] border border-[#4ADE94]/40 text-center">
+          <div class="text-[10px] font-mono text-[#9BA8A2]">D-08</div>
+          <span class="material-symbols-outlined text-[18px] text-[#4ADE94]">check_circle</span>
+        </div>
+        <div class="p-2 rounded-lg bg-[#1A1E1C] border border-[#4ADE94]/40 text-center">
+          <div class="text-[10px] font-mono text-[#9BA8A2]">Today</div>
+          <span class="material-symbols-outlined text-[18px] text-[#4ADE94]">local_fire_department</span>
+        </div>
+      </div>
+
+      <div class="bg-[#1A1E1C] p-3 rounded-xl border border-[#26302C] flex items-center justify-between text-xs">
+        <span class="text-[#9BA8A2]">Milestone Reward:</span>
+        <span class="font-bold text-[#4ADE94] font-mono">14-Day MCI Star Medal (In 2 days)</span>
+      </div>
+
+      <button onclick="closeStreakModal()" class="w-full py-2.5 bg-[#4ADE94] text-[#0B0D0C] font-bold text-xs rounded-xl shadow hover:bg-[#38c47d] transition-all">
+        Close Details
+      </button>
+    </div>
+  </div>
+
+  <!-- VOICE AI TRANSCRIPT MODAL (Hidden by default) -->
+  <div id="voice-modal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#121514] border border-[#26302C] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-[#26302C]">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[#F5B942] text-[24px]">mic</span>
+          <h3 class="text-lg font-bold text-[#F4F6F4]">Voice AI Interaction Log</h3>
+        </div>
+        <button onclick="closeVoiceModal()" class="text-[#9BA8A2] hover:text-[#F4F6F4] p-1 rounded-lg">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="p-3 bg-[#1A1E1C] rounded-xl border border-[#26302C]">
+          <div class="flex justify-between font-mono text-[10px] text-[#9BA8A2] mb-1">
+            <span>PATIENT AUDIO</span>
+            <span>Yesterday, 11:20 AM</span>
+          </div>
+          <p class="text-sm font-medium text-[#F4F6F4]">"दवाई का समय क्या है?"</p>
+          <p class="text-[11px] text-[#9BA8A2] mt-0.5 italic">(Trans: "What time is my medication?")</p>
+        </div>
+
+        <div class="p-3 bg-[#4ADE94]/10 rounded-xl border border-[#4ADE94]/30">
+          <div class="flex justify-between font-mono text-[10px] text-[#4ADE94] mb-1">
+            <span>CARELOOP ASSISTANT</span>
+            <span>Synthesized Audio</span>
+          </div>
+          <p class="text-sm font-medium text-[#F4F6F4]">"आपकी अगली दवाई लिसिनोप्रिल 10mg शाम को 8:00 बजे है।"</p>
+          <p class="text-[11px] text-[#9BA8A2] mt-0.5 italic">(Trans: "Your next medication is Lisinopril 10mg at 8:00 PM this evening.")</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeVoiceModal()" class="px-4 py-2 bg-[#1A1E1C] border border-[#26302C] text-[#F4F6F4] text-xs font-semibold rounded-xl hover:bg-[#26302C]">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="../shared/sound.js"></script>
+<script src="../shared/translations.js"></script>
+<script src="../shared/api.js"></script>
+
+<script>
+  let currentMetric = 'cas';
+  let currentRange = 7;
+
+  const chartData = {
+    cas: {
+      title: 'Cognitive Activity Score (CAS)',
+      unit: 'pts',
+      color: '#4ADE94',
+      minY: 60,
+      maxY: 100,
+      baselineRange: [78, 88],
+      data7: [
+        { date: 'Aug 29', val: 81.2, sub: 'Normal Cadence · Memory Match' },
+        { date: 'Aug 30', val: 82.0, sub: 'Consistent Recall · Face Quiz' },
+        { date: 'Aug 31', val: 80.5, sub: 'Mild Delay · Morning Session' },
+        { date: 'Sep 01', val: 83.4, sub: 'Optimal Focus · Pattern Clock' },
+        { date: 'Sep 02', val: 85.1, sub: 'Rapid Pairing · Nature Sort' },
+        { date: 'Sep 03', val: 84.6, sub: 'Stable Score · Voice AI Routine' },
+        { date: 'Today', val: 86.8, sub: '+5.2% vs baseline · Optimal Corridor' }
+      ],
+      data14: [
+        { date: 'Aug 22', val: 79.4, sub: 'Baseline start' },
+        { date: 'Aug 23', val: 80.1, sub: 'Stable cadence' },
+        { date: 'Aug 24', val: 78.8, sub: 'Minor fatigue' },
+        { date: 'Aug 25', val: 81.0, sub: 'Active' },
+        { date: 'Aug 26', val: 81.5, sub: 'Consistent' },
+        { date: 'Aug 27', val: 82.2, sub: 'High engagement' },
+        { date: 'Aug 28', val: 81.0, sub: 'Stable' },
+        { date: 'Aug 29', val: 81.2, sub: 'Normal Cadence' },
+        { date: 'Aug 30', val: 82.0, sub: 'Consistent Recall' },
+        { date: 'Aug 31', val: 80.5, sub: 'Mild Delay' },
+        { date: 'Sep 01', val: 83.4, sub: 'Optimal Focus' },
+        { date: 'Sep 02', val: 85.1, sub: 'Rapid Pairing' },
+        { date: 'Sep 03', val: 84.6, sub: 'Stable Score' },
+        { date: 'Today', val: 86.8, sub: '+5.2% vs baseline' }
+      ],
+      data30: [
+        { date: 'Aug 06', val: 78.0, sub: 'Baseline established' },
+        { date: 'Aug 09', val: 79.2, sub: 'Steady progress' },
+        { date: 'Aug 12', val: 80.0, sub: 'Engaged routines' },
+        { date: 'Aug 15', val: 78.5, sub: 'Routine check' },
+        { date: 'Aug 18', val: 80.8, sub: 'Gradual increase' },
+        { date: 'Aug 21', val: 81.4, sub: 'Active sessions' },
+        { date: 'Aug 24', val: 81.0, sub: 'Consistent' },
+        { date: 'Aug 27', val: 82.2, sub: 'High engagement' },
+        { date: 'Aug 30', val: 82.0, sub: 'Consistent Recall' },
+        { date: 'Sep 02', val: 85.1, sub: 'Rapid Pairing' },
+        { date: 'Today', val: 86.8, sub: '+5.2% optimal' }
+      ]
+    },
+    adherence: {
+      title: 'Medication Adherence %',
+      unit: '%',
+      color: '#38BDF8',
+      minY: 50,
+      maxY: 100,
+      data7: [
+        { date: 'Aug 29', val: 100, sub: '3/3 Doses Confirmed on time' },
+        { date: 'Aug 30', val: 100, sub: '3/3 Doses Confirmed on time' },
+        { date: 'Aug 31', val: 85, sub: 'Evening dose snoozed 15 min' },
+        { date: 'Sep 01', val: 100, sub: '3/3 Doses Confirmed on time' },
+        { date: 'Sep 02', val: 100, sub: '3/3 Doses Confirmed on time' },
+        { date: 'Sep 03', val: 92, sub: 'Lisinopril verified via voice' },
+        { date: 'Today', val: 100, sub: 'Morning dose confirmed · 100%' }
+      ],
+      data14: [
+        { date: 'Aug 22', val: 90, sub: 'Routine adherence' },
+        { date: 'Aug 23', val: 100, sub: 'On time' },
+        { date: 'Aug 24', val: 100, sub: 'On time' },
+        { date: 'Aug 25', val: 85, sub: 'Snoozed once' },
+        { date: 'Aug 26', val: 100, sub: 'On time' },
+        { date: 'Aug 27', val: 100, sub: 'On time' },
+        { date: 'Aug 28', val: 90, sub: 'Routine adherence' },
+        { date: 'Aug 29', val: 100, sub: '3/3 Doses Confirmed' },
+        { date: 'Aug 30', val: 100, sub: '3/3 Doses Confirmed' },
+        { date: 'Aug 31', val: 85, sub: 'Snoozed 15 min' },
+        { date: 'Sep 01', val: 100, sub: '3/3 Doses Confirmed' },
+        { date: 'Sep 02', val: 100, sub: '3/3 Doses Confirmed' },
+        { date: 'Sep 03', val: 92, sub: 'Voice check' },
+        { date: 'Today', val: 100, sub: 'Morning confirmed' }
+      ],
+      data30: [
+        { date: 'Aug 06', val: 90, sub: 'Adherence: 90%' },
+        { date: 'Aug 09', val: 95, sub: 'Adherence: 95%' },
+        { date: 'Aug 12', val: 100, sub: 'Adherence: 100%' },
+        { date: 'Aug 15', val: 85, sub: 'Adherence: 85%' },
+        { date: 'Aug 18', val: 100, sub: 'Adherence: 100%' },
+        { date: 'Aug 21', val: 92, sub: 'Adherence: 92%' },
+        { date: 'Aug 24', val: 100, sub: 'Adherence: 100%' },
+        { date: 'Aug 27', val: 100, sub: 'Adherence: 100%' },
+        { date: 'Aug 30', val: 100, sub: 'Adherence: 100%' },
+        { date: 'Sep 02', val: 100, sub: 'Adherence: 100%' },
+        { date: 'Today', val: 100, sub: 'Adherence: 100%' }
+      ]
+    },
+    speed: {
+      title: 'Response Speed (Seconds)',
+      unit: 's',
+      color: '#F5B942',
+      minY: 2.0,
+      maxY: 6.0,
+      data7: [
+        { date: 'Aug 29', val: 4.3, sub: 'Card recognition prompt' },
+        { date: 'Aug 30', val: 4.1, sub: 'Face recall average' },
+        { date: 'Aug 31', val: 4.6, sub: 'Evening delay noted' },
+        { date: 'Sep 01', val: 4.0, sub: 'Swift card flips' },
+        { date: 'Sep 02', val: 3.8, sub: 'Steady pace' },
+        { date: 'Sep 03', val: 3.9, sub: 'Morning sharpness' },
+        { date: 'Today', val: 3.6, sub: 'Quickest response: 3.6s' }
+      ],
+      data14: [
+        { date: 'Aug 22', val: 4.5, sub: 'Initial test' },
+        { date: 'Aug 23', val: 4.4, sub: 'Steady' },
+        { date: 'Aug 24', val: 4.7, sub: 'Slow response' },
+        { date: 'Aug 25', val: 4.2, sub: 'Better speed' },
+        { date: 'Aug 26', val: 4.1, sub: 'Consistent' },
+        { date: 'Aug 27', val: 4.3, sub: 'Steady' },
+        { date: 'Aug 28', val: 4.2, sub: 'Steady' },
+        { date: 'Aug 29', val: 4.3, sub: 'Card prompt' },
+        { date: 'Aug 30', val: 4.1, sub: 'Face recall' },
+        { date: 'Aug 31', val: 4.6, sub: 'Evening delay' },
+        { date: 'Sep 01', val: 4.0, sub: 'Swift flips' },
+        { date: 'Sep 02', val: 3.8, sub: 'Steady pace' },
+        { date: 'Sep 03', val: 3.9, sub: 'Morning sharpness' },
+        { date: 'Today', val: 3.6, sub: 'Peak performance' }
+      ],
+      data30: [
+        { date: 'Aug 06', val: 4.8, sub: 'Baseline test' },
+        { date: 'Aug 09', val: 4.6, sub: 'Improving' },
+        { date: 'Aug 12', val: 4.4, sub: 'Improving' },
+        { date: 'Aug 15', val: 4.5, sub: 'Steady' },
+        { date: 'Aug 18', val: 4.2, sub: 'Progress' },
+        { date: 'Aug 21', val: 4.1, sub: 'Good cadence' },
+        { date: 'Aug 24', val: 4.3, sub: 'Consistent' },
+        { date: 'Aug 27', val: 4.2, sub: 'Consistent' },
+        { date: 'Aug 30', val: 4.1, sub: 'Consistent' },
+        { date: 'Sep 02', val: 3.8, sub: 'Fast' },
+        { date: 'Today', val: 3.6, sub: 'Fastest' }
+      ]
+    }
+  };
+
+  function switchChartMetric(metric) {
+    currentMetric = metric;
+    ['cas', 'adherence', 'speed'].forEach(m => {
+      const btn = document.getElementById('btn-metric-' + m);
+      if (!btn) return;
+      if (m === metric) {
+        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#4ADE94] text-[#0B0D0C] shadow transition-all';
+      } else {
+        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-[#9BA8A2] hover:text-[#F4F6F4] transition-all';
+      }
+    });
+    renderPerformanceChart();
+  }
+
+  function switchChartRange(days) {
+    currentRange = days;
+    [7, 14, 30].forEach(d => {
+      const btn = document.getElementById('btn-range-' + d);
+      if (!btn) return;
+      if (d === days) {
+        btn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-[#26302C] text-[#F4F6F4] transition-all';
+      } else {
+        btn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold text-[#9BA8A2] hover:text-[#F4F6F4] transition-all';
+      }
+    });
+    renderPerformanceChart();
+  }
+
+  function renderPerformanceChart() {
+    const container = document.getElementById('chart-container');
+    if (!container) return;
+
+    const metricConf = chartData[currentMetric];
+    const series = metricConf['data' + currentRange] || metricConf.data7;
+    const color = metricConf.color;
+
+    const W = 920;
+    const H = 210;
+    const padL = 48;
+    const padR = 24;
+    const padT = 20;
+    const padB = 35;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+
+    const minY = metricConf.minY;
+    const maxY = metricConf.maxY;
+
+    const getY = (val) => padT + plotH * (1 - (val - minY) / (maxY - minY));
+    const getX = (idx) => padL + (idx / (series.length - 1)) * plotW;
+
+    // Build SVG Grid Lines (4 horizontal lines)
+    let gridLinesSvg = '';
+    const gridSteps = 4;
+    for (let i = 0; i <= gridSteps; i++) {
+      const val = minY + ((maxY - minY) / gridSteps) * i;
+      const y = getY(val);
+      const displayVal = Number.isInteger(val) ? val : val.toFixed(1);
+      gridLinesSvg += `
+        <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#26302C" stroke-dasharray="4 4" stroke-width="1" />
+        <text x="${padL - 10}" y="${y + 4}" fill="#5E6B65" font-family="'JetBrains Mono', monospace" font-size="10" text-anchor="end">${displayVal}${metricConf.unit === '%' ? '%' : ''}</text>
+      `;
+    }
+
+    // Baseline corridor for CAS
+    let baselineSvg = '';
+    if (metricConf.baselineRange) {
+      const bTop = getY(metricConf.baselineRange[1]);
+      const bBottom = getY(metricConf.baselineRange[0]);
+      const bHeight = bBottom - bTop;
+      baselineSvg = `
+        <rect x="${padL}" y="${bTop}" width="${plotW}" height="${bHeight}" fill="#4ADE94" fill-opacity="0.06" rx="4" />
+        <line x1="${padL}" y1="${bTop}" x2="${W - padR}" y2="${bTop}" stroke="#4ADE94" stroke-opacity="0.25" stroke-dasharray="2 2" stroke-width="1" />
+        <line x1="${padL}" y1="${bBottom}" x2="${W - padR}" y2="${bBottom}" stroke="#4ADE94" stroke-opacity="0.25" stroke-dasharray="2 2" stroke-width="1" />
+        <text x="${W - padR - 6}" y="${bTop + 13}" fill="#4ADE94" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="end" opacity="0.7">Target Corridor (78-88)</text>
+      `;
+    }
+
+    // Generate Path points & Area
+    const points = series.map((pt, idx) => ({
+      x: getX(idx),
+      y: getY(pt.val),
+      data: pt
+    }));
+
+    let pathD = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      // Smooth curve using cubic beziers
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cx = (prev.x + curr.x) / 2;
+      pathD += ` C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`;
+    }
+
+    const areaD = `${pathD} L ${points[points.length - 1].x} ${padT + plotH} L ${points[0].x} ${padT + plotH} Z`;
+
+    // Data Nodes & Date labels
+    let nodesSvg = '';
+    let datesSvg = '';
+
+    // If 14 or 30 days, skip some date labels to avoid crowding
+    const labelInterval = currentRange === 30 ? 3 : (currentRange === 14 ? 2 : 1);
+
+    points.forEach((pt, idx) => {
+      // Nodes
+      nodesSvg += `
+        <g class="chart-point-group cursor-pointer" data-idx="${idx}">
+          <circle cx="${pt.x}" cy="${pt.y}" r="9" fill="transparent" />
+          <circle cx="${pt.x}" cy="${pt.y}" r="4" fill="${color}" stroke="#121514" stroke-width="2" class="point-dot transition-transform" />
+          <circle cx="${pt.x}" cy="${pt.y}" r="6.5" fill="none" stroke="${color}" stroke-opacity="0.35" stroke-width="1" />
+        </g>
+      `;
+
+      // Dates
+      if (idx % labelInterval === 0 || idx === points.length - 1) {
+        datesSvg += `
+          <text x="${pt.x}" y="${H - 10}" fill="#9BA8A2" font-family="'JetBrains Mono', monospace" font-size="10" text-anchor="middle">
+            ${pt.data.date}
+          </text>
+        `;
+      }
+    });
+
+    // Assemble full SVG
+    container.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" class="w-full h-full" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.28" />
+            <stop offset="100%" stop-color="${color}" stop-opacity="0.0" />
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        <!-- Background grid -->
+        ${gridLinesSvg}
+
+        <!-- Baseline Corridor -->
+        ${baselineSvg}
+
+        <!-- Gradient fill area -->
+        <path d="${areaD}" fill="url(#chart-grad)" />
+
+        <!-- Polyline Curve -->
+        <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+        <!-- Nodes and Labels -->
+        ${nodesSvg}
+        ${datesSvg}
+      </svg>
+    `;
+
+    // Bind hover tooltips to points
+    const tooltip = document.getElementById('chart-tooltip');
+    const ttDate = document.getElementById('tooltip-date');
+    const ttVal = document.getElementById('tooltip-val');
+    const ttSub = document.getElementById('tooltip-sub');
+
+    const pointGroups = container.querySelectorAll('.chart-point-group');
+    pointGroups.forEach(group => {
+      const idx = parseInt(group.getAttribute('data-idx'), 10);
+      const pt = points[idx];
+
+      const showTooltip = (e) => {
+        const rect = container.getBoundingClientRect();
+        // Calculate coordinate within container
+        const relX = (pt.x / W) * rect.width;
+        const relY = (pt.y / H) * rect.height;
+
+        ttDate.textContent = pt.data.date + ' · ' + metricConf.title;
+        ttVal.innerHTML = `${pt.data.val} <span class="text-xs text-[#9BA8A2] font-normal">${metricConf.unit}</span>`;
+        ttSub.textContent = pt.data.sub;
+
+        tooltip.classList.remove('hidden');
+        tooltip.style.borderColor = color;
+
+        // Position tooltip nicely avoiding right edge
+        const ttWidth = 208;
+        let leftPos = relX - (ttWidth / 2);
+        if (leftPos < 10) leftPos = 10;
+        if (leftPos + ttWidth > rect.width - 10) leftPos = rect.width - ttWidth - 10;
+
+        let topPos = relY - 80;
+        if (topPos < 10) topPos = relY + 15;
+
+        tooltip.style.left = leftPos + 'px';
+        tooltip.style.top = topPos + 'px';
+
+        const dot = group.querySelector('.point-dot');
+        if (dot) dot.setAttribute('r', '6');
+      };
+
+      const hideTooltip = () => {
+        tooltip.classList.add('hidden');
+        const dot = group.querySelector('.point-dot');
+        if (dot) dot.setAttribute('r', '4');
+      };
+
+      group.addEventListener('mouseenter', showTooltip);
+      group.addEventListener('mouseleave', hideTooltip);
+      group.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        showTooltip(e);
+      }, { passive: false });
+    });
+  }
+
+  function applyLanguage(code) {
+    const activeCode = code || (typeof localStorage !== 'undefined' && (localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang'))) || 'en';
+    if (typeof window.applyTranslationsToDOM === 'function') {
+      window.applyTranslationsToDOM(activeCode);
+    }
+    const t = (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS[activeCode])
+      || (window.CARELOOP_TRANSLATIONS && window.CARELOOP_TRANSLATIONS['en'])
+      || {};
+
+    // Dashboard Header
+    const headerTitle = document.querySelector('header h1');
+    if (headerTitle && t.overview) headerTitle.textContent = t.overview;
+
+    // Stats card labels
+    const lblAdherence = document.getElementById('stat-lbl-adherence');
+    if (lblAdherence && t.adherence) lblAdherence.textContent = t.adherence;
+
+    const lblStreak = document.getElementById('stat-lbl-streak');
+    if (lblStreak && t.streak) lblStreak.textContent = t.streak;
+
+    const lblCas = document.getElementById('stat-lbl-cas');
+    if (lblCas && t.casTrend) lblCas.textContent = t.casTrend;
+
+    const lblActive = document.getElementById('stat-lbl-active');
+    if (lblActive && t.lastActive) lblActive.textContent = t.lastActive;
+
+    const lblActivity = document.getElementById('lbl-recent-activity');
+    if (lblActivity && t.recentActivity) lblActivity.textContent = t.recentActivity;
+
+    const lblAlerts = document.getElementById('lbl-anomaly-alerts');
+    if (lblAlerts && t.anomalyAlerts) lblAlerts.textContent = t.anomalyAlerts;
+  }
+
+  // Update Medication Routine Adherence from localStorage
+  function refreshDashboardStats() {
+    try {
+      const stored = localStorage.getItem('careloop_medications');
+      if (stored) {
+        const meds = JSON.parse(stored);
+        const taken = meds.filter(m => m.status === 'taken').length;
+        const total = meds.length;
+        const pct = total > 0 ? Math.round((taken / total) * 100) : 87;
+
+        const statNum = document.querySelector('.grid > div:nth-child(1) span.font-display-lg');
+        if (statNum) statNum.textContent = pct;
+
+        const sparkline = document.querySelector('.grid > div:nth-child(1) .bg-primary-container');
+        if (sparkline) sparkline.style.width = pct + '%';
+      }
+    } catch(e) {}
+  }
+
+  // Dynamic Patient Name Synchronization from Onboarding / localStorage
+  function syncPatientName() {
+    const name = localStorage.getItem('careloop_patient_name') || 'Kamala Sharma';
+    const dob = localStorage.getItem('careloop_patient_dob') || '1950-04-12';
+    const gender = localStorage.getItem('careloop_patient_gender') || 'Female';
+
+    // Calculate age from DOB if present
+    let age = 74;
+    try {
+      if (dob) {
+        const birthDate = new Date(dob);
+        const diff = Date.now() - birthDate.getTime();
+        const ageDate = new Date(diff);
+        const calculatedAge = Math.abs(ageDate.getUTCFullYear() - 1970);
+        if (!isNaN(calculatedAge) && calculatedAge > 0 && calculatedAge < 120) {
+          age = calculatedAge;
+        }
+      }
+    } catch(e) {}
+
+    // 1. Header display
+    const nameEl = document.getElementById('patient-name-display');
+    if (nameEl) nameEl.textContent = name;
+
+    const subEl = document.getElementById('patient-profile-subtitle');
+    if (subEl) subEl.textContent = `Age ${age} · ${gender} · Protocol: Mild Cognitive Impairment (MCI) Monitoring · ID: #CL-8821`;
+
+    // 2. Avatar initials
+    const avatarEl = document.getElementById('patient-avatar-badge');
+    if (avatarEl) {
+      const parts = name.trim().split(' ');
+      const initials = (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+      avatarEl.textContent = initials;
+    }
+
+    // 3. Graph subtitle
+    const graphSub = document.getElementById('patient-graph-subtitle');
+    if (graphSub) graphSub.textContent = `Tracking ${name}'s Cognitive Activity Score (CAS), adherence, and response speed`;
+
+    // 4. Timeline patient name
+    const timeName = document.getElementById('patient-timeline-name');
+    if (timeName) timeName.textContent = name;
+
+    // 5. Device status
+    const devSub = document.getElementById('patient-device-status');
+    if (devSub) devSub.textContent = `${name}'s companion tablet is online with optimal battery (88%).`;
+  }
+
+  // Navigation to other screens via shell parent
+  function parentNavigate(screen, title, modeLabel) {
+    if (window.careLoopSound) window.careLoopSound.playClick();
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'navigate',
+        section: 'dashboard',
+        screen: screen,
+        title: title,
+        modeLabel: modeLabel
+      }, '*');
+    } else {
+      window.location.href = screen;
+    }
+  }
+
+  // Manual Sync Action with Visual Feedback
+  function triggerManualSync(btn) {
+    const icon = document.getElementById('sync-icon');
+    const text = document.getElementById('sync-text');
+    if (!icon || !text) return;
+
+    if (window.careLoopSound) window.careLoopSound.playClick();
+    icon.classList.add('animate-spin');
+    text.textContent = 'Syncing...';
+
+    setTimeout(() => {
+      icon.classList.remove('animate-spin');
+      text.textContent = 'Synced Just Now ✓';
+      syncPatientName();
+      refreshDashboardStats();
+      renderPerformanceChart();
+      if (window.careLoopSound) window.careLoopSound.playSuccess();
+    }, 850);
+  }
+
+  // Modal Handlers
+  function openStreakModal() {
+    if (window.careLoopSound) window.careLoopSound.playPop();
+    const m = document.getElementById('streak-modal');
+    if (m) m.classList.remove('hidden');
+  }
+  function closeStreakModal() {
+    const m = document.getElementById('streak-modal');
+    if (m) m.classList.add('hidden');
+  }
+
+  function showVoiceAiTranscriptModal() {
+    if (window.careLoopSound) window.careLoopSound.playPop();
+    const m = document.getElementById('voice-modal');
+    if (m) m.classList.remove('hidden');
+  }
+  function closeVoiceModal() {
+    const m = document.getElementById('voice-modal');
+    if (m) m.classList.add('hidden');
+  }
+
+  // Alert Review Action
+  function markAlertReviewed(btn, alertId) {
+    btn.textContent = '✓ Reviewed';
+    btn.disabled = true;
+    btn.className = 'mt-2.5 px-3 py-1 bg-[#4ADE94]/15 border border-[#4ADE94]/40 text-[#4ADE94] text-xs font-semibold rounded-lg pointer-events-none';
+
+    const badge = document.getElementById('pending-alerts-badge');
+    if (badge) {
+      badge.textContent = 'ALL CLEAR ✓';
+      badge.className = 'bg-[#4ADE94]/20 text-[#4ADE94] text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border border-[#4ADE94]/40';
+    }
+
+    localStorage.setItem('careloop_' + alertId + '_reviewed', 'true');
+    if (window.careLoopSound) window.careLoopSound.playSuccess();
+  }
+
+  function restoreAlertReviewState() {
+    if (localStorage.getItem('careloop_alert-01_reviewed') === 'true') {
+      const btn = document.getElementById('btn-review-01');
+      if (btn) {
+        btn.textContent = '✓ Reviewed';
+        btn.disabled = true;
+        btn.className = 'mt-2.5 px-3 py-1 bg-[#4ADE94]/15 border border-[#4ADE94]/40 text-[#4ADE94] text-xs font-semibold rounded-lg pointer-events-none';
+      }
+      const badge = document.getElementById('pending-alerts-badge');
+      if (badge) {
+        badge.textContent = 'ALL CLEAR ✓';
+        badge.className = 'bg-[#4ADE94]/20 text-[#4ADE94] text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border border-[#4ADE94]/40';
+      }
+    }
+  }
+
+  window.addEventListener('message', (e) => {
+    if (!e.data) return;
+    if (e.data.type === 'themeChange') {
+      if (e.data.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+      } else {
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.add('dark');
+      }
+      renderPerformanceChart();
+    }
+    if (e.data.type === 'languageChange' && e.data.code) {
+      applyLanguage(e.data.code);
+    }
+    if (e.data.type === 'medicationsUpdated') {
+      refreshDashboardStats();
+    }
+    if (e.data.type === 'patientUpdated') {
+      syncPatientName();
+    }
+  });
+
+  // Listen for storage changes from other tabs/windows
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'careloop_patient_name' || e.key === 'careloop_patient_dob' || e.key === 'careloop_patient_gender') {
+      syncPatientName();
+    }
+    if (e.key === 'careloop_medications') {
+      refreshDashboardStats();
+    }
+    if (e.key === 'careloop_game_history') {
+      syncLiveCAS();
+    }
+  });
+
+  function syncLiveCAS() {
+    if (!window.CareLoopGameState) return;
+    const history = window.CareLoopGameState.getHistory();
+    const casEl = document.getElementById('cas-overview-value');
+    const subEl = document.getElementById('cas-overview-sub');
+    if (!casEl) return;
+
+    if (history && history.length > 0) {
+      const avg = window.CareLoopGameState.getAverageCAS();
+      casEl.textContent = avg.toFixed(1);
+      if (subEl) {
+        subEl.textContent = `${history.length} session${history.length > 1 ? 's' : ''} recorded`;
+      }
+    } else {
+      casEl.textContent = '84.5';
+      if (subEl) {
+        subEl.textContent = '↑4.2 pts above base';
+      }
+    }
+  }
+
+  window.addEventListener('resize', () => {
+    renderPerformanceChart();
+  });
+
+  // Initialize theme & language from localStorage
+  const savedTheme = localStorage.getItem('careloop_theme') || 'dark';
+  if (savedTheme === 'light') {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    syncPatientName();
+    syncLiveCAS();
+    refreshDashboardStats();
+    restoreAlertReviewState();
+    renderPerformanceChart();
+    const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
+    applyLanguage(activeLang);
+  });
+</script>
+</body></html>
+

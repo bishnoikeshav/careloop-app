@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CareLoop — Authentication</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/api.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background-color: #0B0D0C;
+      color: #F4F6F4;
+      font-family: 'Inter', sans-serif;
+    }
+    .pulse-dot {
+      animation: pulse-dot-anim 2s infinite;
+    }
+    @keyframes pulse-dot-anim {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74, 222, 148, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(74, 222, 148, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74, 222, 148, 0); }
+    }
+
+    .otp-input {
+      width: 46px;
+      height: 52px;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 700;
+      background: #1A1E1C;
+      border: 1.5px solid #26302C;
+      border-radius: 10px;
+      color: #4ADE94;
+      transition: all 0.2s ease;
+    }
+    .otp-input:focus {
+      border-color: #4ADE94;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(74, 222, 148, 0.18);
+      background: #212824;
+    }
+
+    .tab-btn {
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 8px;
+      color: #9BA8A2;
+      transition: all 0.15s ease;
+    }
+    .tab-btn.active {
+      background: #1A1E1C;
+      color: #4ADE94;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-[440px] bg-[#121514] rounded-[16px] border border-[#26302C] shadow-2xl overflow-hidden">
+    
+    <!-- Code-Editor Chrome Header -->
+    <div class="h-10 bg-[#1A1E1C] border-b border-[#26302C] flex items-center justify-between px-4">
+      <div class="flex gap-2">
+        <div class="w-3 h-3 rounded-full bg-[#EF5A5A]"></div>
+        <div class="w-3 h-3 rounded-full bg-[#F5B942]"></div>
+        <div class="w-3 h-3 rounded-full bg-[#4ADE94]"></div>
+      </div>
+      <div class="font-mono text-[11px] text-[#9BA8A2] tracking-wider uppercase flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[14px] text-[#4ADE94]">lock</span> AUTH-SERVICE.TSX
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="p-7">
+      
+      <!-- Brand & Headline -->
+      <div class="mb-5 flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-bold tracking-tight text-[#F4F6F4]">CareLoop</h1>
+            <div class="w-2 h-2 rounded-full bg-[#4ADE94] pulse-dot"></div>
+          </div>
+          <p class="text-[13px] text-[#9BA8A2] mt-1">Cognitive care, connected & secured with AWS.</p>
+        </div>
+      </div>
+
+      <!-- Auth Method Switcher Tabs -->
+      <div class="flex p-1 bg-[#0B0D0C] rounded-xl border border-[#26302C] mb-5">
+        <button id="tab-otp-btn" onclick="switchTab('otp')" class="tab-btn active flex-1 text-center flex items-center justify-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">mail</span> 6-Digit Email Code
+        </button>
+        <button id="tab-password-btn" onclick="switchTab('password')" class="tab-btn flex-1 text-center flex items-center justify-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">key</span> Password Login
+        </button>
+      </div>
+
+      <!-- Live Error / Success Alert Banner -->
+      <div id="alert-box" class="hidden mb-4 p-3 rounded-xl text-xs font-medium flex items-center justify-between">
+        <span id="alert-msg"></span>
+        <button onclick="dismissAlert()" class="opacity-70 hover:opacity-100 ml-2">
+          <span class="material-symbols-outlined text-[14px]">close</span>
+        </button>
+      </div>
+
+      <!-- Quick Demo Credentials Helper Pill -->
+      <div class="mb-5 p-2.5 bg-[#1A1E1C] border border-[#26302C] rounded-xl flex items-center justify-between text-xs">
+        <span class="text-[#9BA8A2] flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px] text-[#4ADE94]">bolt</span> Quick Demo Fill:
+        </span>
+        <button onclick="fillDemoCredentials()" class="text-[#4ADE94] hover:underline font-medium">
+          rahul@careloop.health
+        </button>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 1: 6-DIGIT EMAIL CODE (OTP) AUTH -->
+      <!-- ============================================== -->
+      <div id="view-otp">
+        
+        <!-- Step 1: Request Code -->
+        <div id="otp-step-request" class="space-y-4">
+          <div>
+            <label class="block text-[13px] text-[#9BA8A2] mb-1.5 font-medium">Caregiver / Doctor Email</label>
+            <input id="otp-email" type="email" placeholder="name@careloop.health" 
+                   class="w-full bg-[#1A1E1C] border border-[#26302C] rounded-lg h-11 px-3 text-[#F4F6F4] placeholder:text-[#5E6B65] focus:border-[#4ADE94] focus:ring-1 focus:ring-[#4ADE94] text-[14px] font-mono outline-none"/>
+          </div>
+
+          <button onclick="handleSendOtp()" id="send-otp-btn" 
+                  class="w-full bg-[#4ADE94] hover:bg-[#3BC482] active:scale-[0.98] text-[#0B0D0C] font-semibold text-[14px] h-11 rounded-lg transition-all flex items-center justify-center gap-2 shadow-md">
+            <span>Send 6-Digit Code</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+          
+          <p class="text-center text-[12px] text-[#5E6B65]">
+            We will generate and dispatch a secure one-time passcode via AWS SES.
+          </p>
+        </div>
+
+        <!-- Step 2: Enter 6 Digits -->
+        <div id="otp-step-verify" class="hidden space-y-4">
+          <div class="text-center mb-1">
+            <span class="text-xs text-[#9BA8A2]">Enter code sent to <strong id="display-otp-email" class="text-[#F4F6F4]"></strong></span>
+            <button onclick="backToEmailStep()" class="text-xs text-[#4ADE94] hover:underline ml-1">(Edit)</button>
+          </div>
+
+          <!-- 6-Box Digits Grid -->
+          <div class="flex justify-between gap-1.5 py-2">
+            <input type="text" maxlength="1" class="otp-input" id="otp-0" oninput="onOtpInput(0, event)" onkeydown="onOtpKeyDown(0, event)"/>
+            <input type="text" maxlength="1" class="otp-input" id="otp-1" oninput="onOtpInput(1, event)" onkeydown="onOtpKeyDown(1, event)"/>
+            <input type="text" maxlength="1" class="otp-input" id="otp-2" oninput="onOtpInput(2, event)" onkeydown="onOtpKeyDown(2, event)"/>
+            <input type="text" maxlength="1" class="otp-input" id="otp-3" oninput="onOtpInput(3, event)" onkeydown="onOtpKeyDown(3, event)"/>
+            <input type="text" maxlength="1" class="otp-input" id="otp-4" oninput="onOtpInput(4, event)" onkeydown="onOtpKeyDown(4, event)"/>
+            <input type="text" maxlength="1" class="otp-input" id="otp-5" oninput="onOtpInput(5, event)" onkeydown="onOtpKeyDown(5, event)"/>
+          </div>
+
+          <button onclick="handleVerifyOtp()" id="verify-otp-btn"
+                  class="w-full bg-[#4ADE94] hover:bg-[#3BC482] active:scale-[0.98] text-[#0B0D0C] font-semibold text-[14px] h-11 rounded-lg transition-all flex items-center justify-center gap-2 shadow-md">
+            <span>Verify & Enter Dashboard</span>
+          </button>
+
+          <div class="flex items-center justify-between text-xs text-[#5E6B65] pt-1">
+            <span id="countdown-timer">Expires in 10:00</span>
+            <button onclick="handleSendOtp()" class="text-[#4ADE94] hover:underline font-medium">Resend Code</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 2: PASSWORD SIGN IN -->
+      <!-- ============================================== -->
+      <div id="view-password" class="hidden space-y-4">
+        <div>
+          <label class="block text-[13px] text-[#9BA8A2] mb-1.5 font-medium">Email</label>
+          <input id="pwd-email" type="email" placeholder="rahul@careloop.health" 
+                 class="w-full bg-[#1A1E1C] border border-[#26302C] rounded-lg h-11 px-3 text-[#F4F6F4] placeholder:text-[#5E6B65] focus:border-[#4ADE94] focus:ring-1 focus:ring-[#4ADE94] text-[14px] font-mono outline-none"/>
+        </div>
+
+        <div>
+          <div class="flex justify-between mb-1.5">
+            <label class="block text-[13px] text-[#9BA8A2] font-medium">Password</label>
+            <a href="#" class="text-[12px] text-[#4ADE94] hover:underline">Forgot?</a>
+          </div>
+          <div class="relative">
+            <input id="pwd-password" type="password" placeholder="••••••••" 
+                   class="w-full bg-[#1A1E1C] border border-[#26302C] rounded-lg h-11 px-3 pr-10 text-[#F4F6F4] placeholder:text-[#5E6B65] focus:border-[#4ADE94] focus:ring-1 focus:ring-[#4ADE94] text-[14px] font-mono outline-none"/>
+            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#5E6B65] hover:text-[#F4F6F4]">
+              <span id="pwd-eye" class="material-symbols-outlined text-[18px]">visibility</span>
+            </button>
+          </div>
+        </div>
+
+        <button onclick="handlePasswordLogin()" id="pwd-login-btn"
+                class="w-full bg-[#4ADE94] hover:bg-[#3BC482] active:scale-[0.98] text-[#0B0D0C] font-semibold text-[14px] h-11 rounded-lg transition-all flex items-center justify-center gap-2 shadow-md">
+          <span>Sign In to Caregiver Portal</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Card Footer -->
+    <div class="bg-[#0B0D0C] border-t border-[#26302C] px-7 py-3.5 flex items-center justify-between text-xs text-[#5E6B65]">
+      <span>Shielded by AWS WAF & KMS</span>
+      <span class="text-[#4ADE94] font-mono">v1.0.0-PROD</span>
+    </div>
+  </div>
+
+  <script>
+    let activeTab = 'otp';
+    let otpTargetEmail = '';
+    let countdownInterval = null;
+
+    function switchTab(tab) {
+      activeTab = tab;
+      dismissAlert();
+
+      const btnOtp = document.getElementById('tab-otp-btn');
+      const btnPwd = document.getElementById('tab-password-btn');
+      const viewOtp = document.getElementById('view-otp');
+      const viewPwd = document.getElementById('view-password');
+
+      if (tab === 'otp') {
+        btnOtp.classList.add('active');
+        btnPwd.classList.remove('active');
+        viewOtp.classList.remove('hidden');
+        viewPwd.classList.add('hidden');
+      } else {
+        btnPwd.classList.add('active');
+        btnOtp.classList.remove('active');
+        viewPwd.classList.remove('hidden');
+        viewOtp.classList.add('hidden');
+      }
+
+      if (window.careLoopSound) window.careLoopSound.playClick();
+    }
+
+    function showAlert(msg, type = 'error') {
+      const box = document.getElementById('alert-box');
+      const text = document.getElementById('alert-msg');
+      box.className = `mb-4 p-3 rounded-xl text-xs font-medium flex items-center justify-between ${
+        type === 'error' ? 'bg-[#3A1414] text-[#FFA4A4] border border-[#EF5A5A]/30' : 'bg-[#122A1E] text-[#7FE0AC] border border-[#4ADE94]/30'
+      }`;
+      text.textContent = msg;
+      box.classList.remove('hidden');
+    }
+
+    function dismissAlert() {
+      document.getElementById('alert-box').classList.add('hidden');
+    }
+
+    function fillDemoCredentials() {
+      document.getElementById('otp-email').value = 'rahul@careloop.health';
+      document.getElementById('pwd-email').value = 'rahul@careloop.health';
+      document.getElementById('pwd-password').value = 'CareLoop2026!';
+      showAlert('Filled caregiver credentials! Click "Send 6-Digit Code" or switch to Password Login.', 'success');
+      if (window.careLoopSound) window.careLoopSound.playClick();
+    }
+
+    // --- OTP Step 1: Send Code ---
+    async function handleSendOtp() {
+      const email = document.getElementById('otp-email').value.trim();
+      if (!email || !email.includes('@')) {
+        showAlert('Please enter a valid email address.');
+        return;
+      }
+
+      otpTargetEmail = email;
+      const btn = document.getElementById('send-otp-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Generating Code...';
+
+      try {
+        const res = await window.careLoopApi.sendOtp(email);
+        
+        document.getElementById('otp-step-request').classList.add('hidden');
+        document.getElementById('otp-step-verify').classList.remove('hidden');
+        document.getElementById('display-otp-email').textContent = email;
+
+        // Clear any previous values in the 6 inputs
+        for (let i = 0; i < 6; i++) {
+          const el = document.getElementById('otp-' + i);
+          if (el) el.value = '';
+        }
+
+        // In dev mode, auto-fill or display code
+        if (res.previewCode) {
+          showAlert(`Verification Code: ${res.previewCode} (Auto-filled for testing)`, 'success');
+          // Automatically populate and focus
+          setTimeout(() => {
+            for (let i = 0; i < 6; i++) {
+              const el = document.getElementById('otp-' + i);
+              if (el) el.value = res.previewCode[i] || '';
+            }
+            const last = document.getElementById('otp-5');
+            if (last) last.focus();
+          }, 150);
+        } else {
+          showAlert(`6-digit verification code sent to ${email}.`, 'success');
+          setTimeout(() => {
+            const first = document.getElementById('otp-0');
+            if (first) first.focus();
+          }, 100);
+        }
+
+        startTimer(10 * 60);
+      } catch (err) {
+        showAlert(err.message || 'Failed to dispatch verification code.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Send 6-Digit Code</span>';
+      }
+    }
+
+    function backToEmailStep() {
+      document.getElementById('otp-step-verify').classList.add('hidden');
+      document.getElementById('otp-step-request').classList.remove('hidden');
+      if (countdownInterval) clearInterval(countdownInterval);
+      dismissAlert();
+    }
+
+    // OTP 6-box input navigation & paste support
+    function onOtpInput(index, event) {
+      const val = event.target.value.replace(/\D/g, ''); // allow only digits
+      event.target.value = val ? val.slice(-1) : '';
+
+      if (val.length >= 1) {
+        if (index < 5) {
+          const next = document.getElementById(`otp-${index + 1}`);
+          if (next) next.focus();
+        } else {
+          // Check if all 6 filled
+          let fullCode = '';
+          for (let i = 0; i < 6; i++) fullCode += (document.getElementById(`otp-${i}`) || {}).value || '';
+          if (fullCode.length === 6) {
+            handleVerifyOtp();
+          }
+        }
+      }
+    }
+
+    function onOtpKeyDown(index, event) {
+      if (event.key === 'Backspace') {
+        if (!event.target.value && index > 0) {
+          const prev = document.getElementById(`otp-${index - 1}`);
+          if (prev) {
+            prev.focus();
+            prev.value = '';
+          }
+        }
+      } else if (event.key === 'ArrowLeft' && index > 0) {
+        document.getElementById(`otp-${index - 1}`).focus();
+      } else if (event.key === 'ArrowRight' && index < 5) {
+        document.getElementById(`otp-${index + 1}`).focus();
+      } else if (event.key === 'Enter') {
+        handleVerifyOtp();
+      }
+    }
+
+    // Support full clipboard paste of 6-digit code on any input
+    document.addEventListener('DOMContentLoaded', () => {
+      for (let i = 0; i < 6; i++) {
+        const input = document.getElementById('otp-' + i);
+        if (input) {
+          input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+            if (text.length >= 6) {
+              for (let j = 0; j < 6; j++) {
+                const target = document.getElementById('otp-' + j);
+                if (target) target.value = text[j];
+              }
+              document.getElementById('otp-5').focus();
+              handleVerifyOtp();
+            }
+          });
+        }
+      }
+    });
+
+    // --- OTP Step 2: Verify Code ---
+    async function handleVerifyOtp() {
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += (document.getElementById(`otp-${i}`).value || '').trim();
+      }
+
+      if (code.length < 6) {
+        showAlert('Please enter all 6 digits of the code.');
+        return;
+      }
+
+      const btn = document.getElementById('verify-otp-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Verifying...';
+
+      try {
+        const res = await window.careLoopApi.verifyOtp(otpTargetEmail, code);
+        showAlert('Verified successfully! Entering Caregiver Dashboard...', 'success');
+        if (window.careLoopSound) window.careLoopSound.playMatch();
+
+        setTimeout(() => {
+          window.parent.postMessage({
+            type: 'navigate',
+            route: { role: 'dashboard', file: '09-dashboard-overview.html', navId: 'nav-09' }
+          }, '*');
+        }, 500);
+      } catch (err) {
+        showAlert(err.message || 'Invalid verification code. Please check and retry.');
+        if (window.careLoopSound) window.careLoopSound.playMismatch();
+        // Clear fields on error for easy re-entry
+        for (let i = 0; i < 6; i++) {
+          const el = document.getElementById('otp-' + i);
+          if (el) el.value = '';
+        }
+        document.getElementById('otp-0').focus();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Verify & Enter Dashboard</span>';
+      }
+    }
+
+    // --- Password Login ---
+    async function handlePasswordLogin() {
+      const email = document.getElementById('pwd-email').value.trim();
+      const password = document.getElementById('pwd-password').value;
+
+      if (!email || !password) {
+        showAlert('Please enter both email and password.');
+        return;
+      }
+
+      const btn = document.getElementById('pwd-login-btn');
+      btn.disabled = true;
+      btn.innerHTML = 'Authenticating...';
+
+      try {
+        await window.careLoopApi.login(email, password);
+        showAlert('Welcome back! Directing to dashboard...', 'success');
+        if (window.careLoopSound) window.careLoopSound.playMatch();
+
+        setTimeout(() => {
+          window.parent.postMessage({
+            type: 'navigate',
+            route: { role: 'dashboard', file: '09-dashboard-overview.html', navId: 'nav-09' }
+          }, '*');
+        }, 600);
+      } catch (err) {
+        showAlert(err.message || 'Invalid credentials. Please try again.');
+        if (window.careLoopSound) window.careLoopSound.playMismatch();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Sign In to Caregiver Portal</span>';
+      }
+    }
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById('pwd-password');
+      const eye = document.getElementById('pwd-eye');
+      if (input.type === 'password') {
+        input.type = 'text';
+        eye.textContent = 'visibility_off';
+      } else {
+        input.type = 'password';
+        eye.textContent = 'visibility';
+      }
+    }
+
+    function startTimer(durationSec) {
+      if (countdownInterval) clearInterval(countdownInterval);
+      let remaining = durationSec;
+      const display = document.getElementById('countdown-timer');
+
+      countdownInterval = setInterval(() => {
+        remaining--;
+        const mins = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const secs = String(remaining % 60).padStart(2, '0');
+        display.textContent = `Expires in ${mins}:${secs}`;
+
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          display.textContent = 'Code expired';
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

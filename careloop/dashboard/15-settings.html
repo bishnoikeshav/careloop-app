@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CareLoop - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#e2e3e0",
+                        "primary-container": "#4ade94",
+                        "surface-container-highest": "#333534",
+                        "on-primary": "#003920",
+                        "surface-container-low": "#1a1c1b",
+                        "secondary-container": "#444845",
+                        "inverse-primary": "#006d41",
+                        "border": "#26302C",
+                        "primary-fixed-dim": "#4cdf95",
+                        "on-primary-fixed-variant": "#005230",
+                        "surface": "#121514",
+                        "outline": "#869489",
+                        "surface-container-high": "#282a29",
+                        "text-secondary": "#9BA8A2",
+                        "inverse-surface": "#e2e3e0",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#181c1a",
+                        "on-surface": "#e2e3e0",
+                        "danger": "#EF5A5A",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#e0e3e0",
+                        "on-tertiary-fixed": "#2d1600",
+                        "surface-container-lowest": "#0d0f0e",
+                        "surface-dim": "#121413",
+                        "primary-fixed": "#6dfdaf",
+                        "on-tertiary": "#4a2800",
+                        "error": "#ffb4ab",
+                        "inverse-on-surface": "#2f312f",
+                        "tertiary-fixed": "#ffdcbf",
+                        "background": "#121413",
+                        "surface-container": "#1e201f",
+                        "surface-tint": "#4cdf95",
+                        "surface-bright": "#383a38",
+                        "secondary-fixed-dim": "#c4c7c4",
+                        "on-primary-fixed": "#002110",
+                        "text-primary": "#F4F6F4",
+                        "on-primary-container": "#005e38",
+                        "on-tertiary-container": "#794504",
+                        "primary": "#6bfbae",
+                        "on-secondary-container": "#b2b6b3",
+                        "on-tertiary-fixed-variant": "#6a3b00",
+                        "on-error-container": "#ffdad6",
+                        "outline-variant": "#3c4a40",
+                        "text-dim": "#5E6B65",
+                        "surface-variant": "#333534",
+                        "tertiary-fixed-dim": "#ffb873",
+                        "on-surface-variant": "#bbcabd",
+                        "secondary": "#c4c7c4",
+                        "on-secondary": "#2d312f",
+                        "tertiary": "#ffdbbc",
+                        "on-secondary-fixed-variant": "#444845",
+                        "tertiary-container": "#ffb66f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "xl": "32px",
+                        "margin-mobile": "16px",
+                        "gutter": "20px",
+                        "margin-desktop": "32px",
+                        "md": "16px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["26px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0B0D0C; }
+        ::-webkit-scrollbar-thumb { background: #26302C; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #333534; }
+        
+        .toggle-checkbox:checked { right: 0; border-color: #4ade94; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #4ade94; }
+        .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
+        nav { display: none !important; }
+        .lg\:ml-\[280px\] { margin-left: 0 !important; }
+        html.light body, html.light { background-color: #F8FAF8 !important; color: #12201A !important; }
+        html.light header { background-color: #FFFFFF !important; border-color: #DCE5E0 !important; }
+        html.light .bg-surface { background-color: #FFFFFF !important; border-color: #DCE5E0 !important; }
+    </style>
+</head>
+<body class="bg-[#0B0D0C] text-text-primary min-h-screen font-body-md overflow-y-auto">
+<!-- SideNavBar -->
+<nav class="hidden">
+<div class="flex items-center gap-sm mb-xl px-sm">
+<span class="material-symbols-outlined text-primary text-[32px]">health_and_safety</span>
+<div>
+<h1 class="text-headline-md font-headline-md font-bold text-primary tracking-tight">CareLoop</h1>
+<p class="text-label-md font-label-md text-text-secondary uppercase tracking-widest mt-1">Vigilant Care</p>
+</div>
+</div>
+<div class="flex flex-col gap-sm flex-grow mt-lg">
+<!-- Inactive -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">dashboard</span>
+<span class="text-label-md font-label-md">Dashboard</span>
+</a>
+<!-- Inactive -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">monitor_heart</span>
+<span class="text-label-md font-label-md">Health</span>
+</a>
+<!-- Inactive -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">call</span>
+<span class="text-label-md font-label-md">Calling</span>
+</a>
+<!-- Active -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-primary bg-surface-container-high font-bold transform hover:scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="text-label-md font-label-md">Settings</span>
+</a>
+</div>
+<div class="mt-auto flex flex-col gap-md pt-lg border-t border-border">
+<div class="flex items-center justify-between px-sm py-sm rounded-lg bg-surface-container-low border border-border">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-border flex items-center justify-center">
+<img class="w-full h-full object-cover" data-alt="A macro shot of a sleek, dark metallic caregiver ID badge with a subtle glowing green outline. The badge features a stylized abstract silhouette against a matte black textured background, illuminated by soft, high-key rim lighting. The aesthetic is modern, professional, and clinical, reflecting precision care." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZR46ZfpCE5fSwGXcE3rssYZRV9NYTOI_XaKcsL3hXH53fgp-eixSgiGgDj8GxibZt4B104rjOISRY3sZEjVdH0iSK2PFljtd-xPFZiqXJRZWM24BDAuJgq12_jkplf5uoKnQT1y2sZXoX73gvu5cGsrNda-GVezQFpF8SW0SQPj2NV5Z0EBW_fbhX9EaBfIe4fniDZALMueRNVICkPQ7MFnj7YFr02UFjIFMafTXUP4c_6zB8TYt248pk3A5pqgMnYq5ISMxrUx0"/>
+</div>
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-text-primary">Status</span>
+<span class="text-label-sm font-label-sm text-primary">On-Shift</span>
+</div>
+</div>
+<div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(74,222,148,0.6)]"></div>
+</div>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-text-secondary hover:text-danger hover:bg-error-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-label-md font-label-md">Logout</span>
+</a>
+</div>
+</nav>
+<!-- TopAppBar -->
+<header class="fixed top-0 right-0 w-full lg:w-[calc(100%-280px)] z-40 bg-surface/80 backdrop-blur-md border-b border-border flex justify-between items-center h-16 px-lg transition-all duration-300">
+<div class="flex items-center gap-md">
+<h2 class="text-headline-sm font-headline-sm font-bold text-text-primary tracking-tight">Settings</h2>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-sm text-text-secondary hover:text-primary transition-colors duration-200 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-sm text-text-secondary hover:text-primary transition-colors duration-200 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="w-8 h-8 ml-sm rounded-full overflow-hidden border border-border">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A macro shot of a sleek, dark metallic caregiver ID badge with a subtle glowing green outline. The badge features a stylized abstract silhouette against a matte black textured background, illuminated by soft, high-key rim lighting. The aesthetic is modern, professional, and clinical, reflecting precision care." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC12911AiyhgmcTT6lTca1BfW64EaMXnxkb-mVLJ7rMe1PZB78m4D2x8WWgDOHEdTHtjhf5eWl64pF-kHqn_u5H7T-MEKDaFeIJut0DXzbWlfFr5kCAl1qFNZ9rrcLxD6XlgLmy6B0R-TgMC_K6fAb4TKwy5078cYRvV_JtBD1L9on2DjsKbp1vNjeZ3NGZy8n7kdf4jF7IAWL2CgQj0XuYziDmdBZsygXW-wEHbsYREjtpJ3z3oCVsZPuoB0C1sCm08AnVViRs9p4"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="lg:ml-[280px] pt-[88px] pb-xl px-margin-mobile md:px-margin-desktop min-h-screen">
+<div class="max-w-5xl mx-auto space-y-xl">
+<!-- Section 1: Personalization -->
+<section class="group">
+<div class="flex items-center gap-md mb-lg">
+<span class="text-label-sm font-label-sm text-text-secondary tracking-widest border border-border px-2 py-1 rounded bg-surface">01</span>
+<h3 class="text-headline-sm font-headline-sm font-semibold text-text-primary">Personalization</h3>
+<div class="flex-grow h-px bg-border"></div>
+</div>
+<div class="bg-surface rounded-xl border border-border p-lg hover:bg-surface-container-low transition-colors duration-300 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-surface-container-highest group-hover:bg-primary transition-colors duration-300"></div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-xl">
+<!-- Region -->
+<div class="flex flex-col gap-sm">
+<label class="text-label-md font-label-md text-text-secondary">Operating Region</label>
+<div class="relative">
+<select class="w-full bg-surface-dim border border-border rounded-lg py-3 pl-12 pr-10 text-body-md font-body-md text-text-primary appearance-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+<option value="assam">Assam, India</option>
+<option value="bengal">West Bengal, India</option>
+<option value="delhi">Delhi, India</option>
+</select>
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary">location_on</span>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Language -->
+<div class="flex flex-col gap-sm">
+<label class="text-label-md font-label-md text-text-secondary">Primary Interface Language</label>
+<div class="relative">
+<select class="w-full bg-surface-dim border border-border rounded-lg py-3 pl-12 pr-10 text-body-md font-body-md text-text-primary appearance-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+<option value="as">Assamese (অসমীয়া)</option>
+<option value="en">English (US)</option>
+<option value="hi">Hindi (हिन्दी)</option>
+</select>
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary">translate</span>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+<div class="mt-lg pt-lg border-t border-border flex flex-col gap-sm">
+<span class="text-label-md font-label-md text-text-secondary">Active Communication Protocols (Skill Pills)</span>
+<div class="flex flex-wrap gap-sm">
+<span class="px-3 py-1 rounded bg-primary-container/10 border border-primary-container/30 text-primary-container text-label-md font-label-md flex items-center gap-1">EN <span class="material-symbols-outlined text-[14px]">check</span></span>
+<span class="px-3 py-1 rounded bg-primary-container/10 border border-primary-container/30 text-primary-container text-label-md font-label-md flex items-center gap-1">HI <span class="material-symbols-outlined text-[14px]">check</span></span>
+<span class="px-3 py-1 rounded bg-primary-container/10 border border-primary-container/30 text-primary-container text-label-md font-label-md flex items-center gap-1">AS <span class="material-symbols-outlined text-[14px]">check</span></span>
+<span class="px-3 py-1 rounded bg-primary-container/10 border border-primary-container/30 text-primary-container text-label-md font-label-md flex items-center gap-1">BN <span class="material-symbols-outlined text-[14px]">check</span></span>
+<span class="px-3 py-1 rounded bg-primary-container/10 border border-primary-container/30 text-primary-container text-label-md font-label-md flex items-center gap-1">MNI <span class="material-symbols-outlined text-[14px]">check</span></span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Patient View & Security -->
+<section class="group">
+<div class="flex items-center gap-md mb-lg">
+<span class="text-label-sm font-label-sm text-text-secondary tracking-widest border border-border px-2 py-1 rounded bg-surface">02</span>
+<h3 class="text-headline-sm font-headline-sm font-semibold text-text-primary">Patient View &amp; Security</h3>
+<div class="flex-grow h-px bg-border"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<!-- PIN Module -->
+<div class="bg-surface rounded-xl border border-border p-lg flex flex-col justify-between hover:bg-surface-container-low transition-colors duration-300">
+<div>
+<div class="flex items-center justify-between mb-md">
+<span class="text-label-md font-label-md text-text-secondary flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">lock</span> Quick Access PIN</span>
+</div>
+<div class="flex items-center gap-sm">
+<input id="pin-input-field" class="bg-surface-dim border border-border rounded-lg py-3 px-4 w-32 text-center text-headline-sm font-headline-sm tracking-[0.5em] text-text-primary cursor-not-allowed" disabled="" type="password" value="1234"/>
+<button onclick="changePin()" class="px-md py-3 rounded-lg border border-border bg-transparent text-text-primary text-label-md font-label-md hover:bg-surface-container-high transition-colors cursor-pointer">Change PIN</button>
+</div>
+<p class="text-body-sm font-body-sm text-text-dim mt-sm" id="pin-patient-desc">Used for quick unlocking during Kamala Sharma's care sessions.</p>
+</div>
+</div>
+<!-- Game Mode Module -->
+<div class="bg-surface rounded-xl border border-border p-lg flex flex-col justify-between hover:bg-surface-container-low transition-colors duration-300">
+<div class="flex flex-col h-full justify-between">
+<div>
+<div class="flex items-center justify-between mb-sm">
+<span class="text-label-md font-label-md text-text-secondary flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">sports_esports</span> Therapeutic Engagement</span>
+</div>
+<h4 class="text-body-md font-body-md text-text-primary mb-1">Timed Game Mode</h4>
+<p class="text-body-sm font-body-sm text-text-dim">Restrict cognitive exercise modules to predefined session lengths.</p>
+</div>
+<div class="mt-md flex items-center justify-between p-sm bg-surface-dim rounded-lg border border-border">
+<span class="text-label-md font-label-md text-text-secondary uppercase">Status: <span class="text-text-primary">Off</span></span>
+<!-- Custom Toggle -->
+<label class="flex items-center cursor-pointer">
+<div class="relative">
+<input class="sr-only" type="checkbox"/>
+<div class="block bg-surface-container-highest w-10 h-6 rounded-full border border-border transition-colors"></div>
+<div class="dot absolute left-1 top-1 bg-text-secondary w-4 h-4 rounded-full transition transform"></div>
+</div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Co-Caregivers -->
+<section class="group">
+<div class="flex items-center gap-md mb-lg">
+<span class="text-label-sm font-label-sm text-text-secondary tracking-widest border border-border px-2 py-1 rounded bg-surface">03</span>
+<h3 class="text-headline-sm font-headline-sm font-semibold text-text-primary">Co-Caregivers Team</h3>
+<div class="flex-grow h-px bg-border"></div>
+</div>
+<div class="bg-surface rounded-xl border border-border overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-border">
+<th class="py-sm px-lg text-label-sm font-label-sm text-text-secondary uppercase tracking-wider">Caregiver</th>
+<th class="py-sm px-lg text-label-sm font-label-sm text-text-secondary uppercase tracking-wider">Role / Access</th>
+<th class="py-sm px-lg text-label-sm font-label-sm text-text-secondary uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-md px-lg">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary font-bold">MD</div>
+<div>
+<div class="text-body-md font-body-md text-text-primary">Meena Devi</div>
+<div class="text-label-sm font-label-sm text-text-dim">meena.d@careloop.local</div>
+</div>
+</div>
+</td>
+<td class="py-md px-lg">
+<select class="bg-transparent border border-border rounded py-1 px-2 text-label-md font-label-md text-text-primary focus:outline-none focus:border-primary">
+<option>Primary Nurse</option>
+<option selected="">Shift Supervisor</option>
+<option>Observer</option>
+</select>
+</td>
+<td class="py-md px-lg text-right">
+<button class="text-text-secondary hover:text-danger p-sm rounded-full hover:bg-error-container/10 transition-colors" title="Remove Access">
+<span class="material-symbols-outlined text-[20px]">person_remove</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-md px-lg">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary font-bold">DB</div>
+<div>
+<div class="text-body-md font-body-md text-text-primary">Dr. Bose</div>
+<div class="text-label-sm font-label-sm text-text-dim">a.bose@careloop.clinic</div>
+</div>
+</div>
+</td>
+<td class="py-md px-lg">
+<select class="bg-transparent border border-border rounded py-1 px-2 text-label-md font-label-md text-text-primary focus:outline-none focus:border-primary">
+<option selected="">Attending Physician</option>
+<option>Consultant</option>
+</select>
+</td>
+<td class="py-md px-lg text-right">
+<button class="text-text-secondary hover:text-danger p-sm rounded-full hover:bg-error-container/10 transition-colors" title="Remove Access">
+<span class="material-symbols-outlined text-[20px]">person_remove</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<button class="w-full py-md border-t border-dashed border-border text-label-md font-label-md text-text-secondary hover:text-primary hover:bg-surface-container-low transition-colors flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        Invite co-caregiver
+                    </button>
+</div>
+</section>
+<!-- Section 4: Notifications -->
+<section class="group">
+<div class="flex items-center gap-md mb-lg">
+<span class="text-label-sm font-label-sm text-text-secondary tracking-widest border border-border px-2 py-1 rounded bg-surface">04</span>
+<h3 class="text-headline-sm font-headline-sm font-semibold text-text-primary">Alert Preferences</h3>
+<div class="flex-grow h-px bg-border"></div>
+</div>
+<div class="bg-surface rounded-xl border border-border flex flex-col">
+<!-- Row 1 -->
+<div class="flex items-center justify-between p-lg border-b border-border hover:bg-surface-container-low transition-colors">
+<div>
+<div class="text-body-md font-body-md text-text-primary flex items-center gap-sm">
+<span class="material-symbols-outlined text-text-secondary text-[20px]">smartphone</span>
+                                Push Notifications
+                            </div>
+<div class="text-label-sm font-label-sm text-text-dim mt-1">Real-time device alerts for scheduled tasks.</div>
+</div>
+<label class="flex items-center cursor-pointer">
+<div class="relative">
+<input checked="" class="sr-only" type="checkbox"/>
+<div class="block bg-primary w-10 h-6 rounded-full border border-primary transition-colors"></div>
+<div class="dot absolute left-5 top-1 bg-surface w-4 h-4 rounded-full transition transform shadow-sm"></div>
+</div>
+</label>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center justify-between p-lg border-b border-border hover:bg-surface-container-low transition-colors">
+<div>
+<div class="text-body-md font-body-md text-text-primary flex items-center gap-sm">
+<span class="material-symbols-outlined text-text-secondary text-[20px]">sms</span>
+                                SMS Fallback
+                            </div>
+<div class="text-label-sm font-label-sm text-text-dim mt-1">Text messages if device is offline.</div>
+</div>
+<label class="flex items-center cursor-pointer">
+<div class="relative">
+<input checked="" class="sr-only" type="checkbox"/>
+<div class="block bg-primary w-10 h-6 rounded-full border border-primary transition-colors"></div>
+<div class="dot absolute left-5 top-1 bg-surface w-4 h-4 rounded-full transition transform shadow-sm"></div>
+</div>
+</label>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center justify-between p-lg border-b border-border hover:bg-surface-container-low transition-colors">
+<div>
+<div class="text-body-md font-body-md text-text-primary flex items-center gap-sm">
+<span class="material-symbols-outlined text-text-secondary text-[20px]">mail</span>
+                                Email Digest
+                            </div>
+<div class="text-label-sm font-label-sm text-text-dim mt-1">Weekly summary of patient activity.</div>
+</div>
+<label class="flex items-center cursor-pointer">
+<div class="relative">
+<input class="sr-only" type="checkbox"/>
+<div class="block bg-surface-container-highest w-10 h-6 rounded-full border border-border transition-colors"></div>
+<div class="dot absolute left-1 top-1 bg-text-secondary w-4 h-4 rounded-full transition transform"></div>
+</div>
+</label>
+</div>
+<!-- Row 4 (Locked) -->
+<div class="flex items-center justify-between p-lg bg-surface-container-low/50 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-danger/50"></div>
+<div class="opacity-70">
+<div class="text-body-md font-body-md text-text-primary flex items-center gap-sm">
+<span class="material-symbols-outlined text-danger text-[20px]">warning</span>
+                                Critical Health Alarms
+                            </div>
+<div class="text-label-sm font-label-sm text-text-dim mt-1">Cannot be disabled by policy. Requires immediate action.</div>
+</div>
+<div class="flex items-center gap-sm opacity-70">
+<span class="text-label-sm font-label-sm text-danger uppercase tracking-wider">Forced On</span>
+<span class="material-symbols-outlined text-text-dim text-[16px]">lock</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Hidden on lg, visible on mobile/tablet) - Inherits JSON logic -->
+<nav class="fixed bottom-0 w-full z-50 lg:hidden bg-surface-container border-t border-border shadow-lg flex justify-around items-center h-16 pb-safe px-sm transition-transform duration-300">
+<a class="flex flex-col items-center justify-center w-full h-full text-text-dim active:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">dashboard</span>
+<span class="text-label-sm font-label-sm-mobile">Dash</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-text-dim active:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">monitor_heart</span>
+<span class="text-label-sm font-label-sm-mobile">Health</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-text-dim active:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">call</span>
+<span class="text-label-sm font-label-sm-mobile">Call</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-primary active:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="text-label-sm font-label-sm-mobile font-bold">Settings</span>
+</a>
+</nav>
+<script>
+        // Simple toggle logic for custom switches
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const dot = this.parentElement.querySelector('.dot');
+                const bg = this.parentElement.querySelector('.block');
+                
+                if(this.checked) {
+                    dot.style.transform = 'translateX(100%)';
+                    dot.classList.remove('bg-text-secondary');
+                    dot.classList.add('bg-surface');
+                    bg.classList.remove('bg-surface-container-highest', 'border-border');
+                    bg.classList.add('bg-primary', 'border-primary');
+                } else {
+                    dot.style.transform = 'translateX(0)';
+                    dot.classList.add('bg-text-secondary');
+                    dot.classList.remove('bg-surface');
+                    bg.classList.add('bg-surface-container-highest', 'border-border');
+                    bg.classList.remove('bg-primary', 'border-primary');
+                }
+            });
+        });
+
+        function syncPatientName() {
+            const pName = localStorage.getItem('careloop_patient_name') || 'Kamala Sharma';
+            const el = document.getElementById('pin-patient-desc');
+            if (el) el.textContent = `Used for quick unlocking during ${pName}'s care sessions.`;
+        }
+
+        function changePin() {
+            const newPin = prompt("Enter new 4-digit PIN for patient device lock:", "1234");
+            if (newPin && newPin.trim().length === 4) {
+                document.getElementById('pin-input-field').value = newPin.trim();
+                localStorage.setItem('careloop_device_pin', newPin.trim());
+                alert("Security PIN updated to: " + newPin.trim());
+            } else if (newPin) {
+                alert("PIN must be exactly 4 digits.");
+            }
+        }
+
+        window.addEventListener('message', (e) => {
+            if (!e.data) return;
+            if (e.data.type === 'themeChange') {
+                if (e.data.theme === 'light') {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.classList.add('light');
+                } else {
+                    document.documentElement.classList.remove('light');
+                    document.documentElement.classList.add('dark');
+                }
+            }
+            if (e.data.type === 'patientUpdated') {
+                syncPatientName();
+            }
+        });
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'careloop_patient_name') {
+                syncPatientName();
+            }
+        });
+
+        const savedTheme = localStorage.getItem('careloop_theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            syncPatientName();
+            const savedPin = localStorage.getItem('careloop_device_pin');
+            if (savedPin) {
+                document.getElementById('pin-input-field').value = savedPin;
+            }
+        });
+    </script>
+</body></html>
+

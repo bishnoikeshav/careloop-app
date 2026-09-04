@@ -1,0 +1,39 @@
+﻿# Dependencies
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Build and cache outputs
+dist/
+build/
+.cache/
+.parcel-cache/
+.next/
+out/
+
+# Archives
+*.rar
+*.zip
+*.tar.gz
+*.7z
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Scratch & logs
+*.log
+scratch/

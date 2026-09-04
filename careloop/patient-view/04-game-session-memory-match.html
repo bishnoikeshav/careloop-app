@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>CareLoop — Memory Match</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="../shared/voiceManager.js"></script>
+  <script src="../shared/gameState.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="../shared/api.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #FFFFFF;
+      color: #12201A;
+      user-select: none;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Hide scrollbars while preserving scroll */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+    html, body { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 3D Card Flip Perspective */
+    .card-scene {
+      perspective: 1000px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+    }
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+      border-radius: 20px;
+    }
+    .card-inner.is-flipped {
+      transform: rotateY(180deg);
+    }
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(18, 32, 26, 0.05);
+    }
+
+    /* Card Back (Face Down) */
+    .card-back {
+      background: #F4F7F5;
+      border: 2px solid #E3ECE7;
+      transition: all 0.2s ease;
+    }
+    .card-back:hover {
+      background: #EAF1ED;
+      border-color: #2E9E63;
+      transform: translateY(-2px);
+    }
+    .card-back:active {
+      transform: scale(0.96);
+    }
+
+    /* Card Front (Face Up) - Minimalist Vector Art */
+    .card-front {
+      background: #FFFFFF;
+      border: 2.5px solid #2E9E63;
+      transform: rotateY(180deg);
+      padding: 12px;
+    }
+    .card-inner.is-matched .card-front {
+      background: #EAF5EF;
+      border-color: #2E9E63;
+      animation: matchBounce 0.45s ease;
+    }
+
+    @keyframes matchBounce {
+      0%, 100% { transform: rotateY(180deg) scale(1); }
+      50% { transform: rotateY(180deg) scale(1.1); }
+    }
+
+    .vector-icon {
+      width: 38px;
+      height: 38px;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .pulse-glow {
+      box-shadow: 0 0 0 0 rgba(46, 158, 99, 0.4);
+      animation: pulseGreen 1.8s infinite;
+    }
+    @keyframes pulseGreen {
+      0% { box-shadow: 0 0 0 0 rgba(46, 158, 99, 0.4); }
+      70% { box-shadow: 0 0 0 16px rgba(46, 158, 99, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(46, 158, 99, 0); }
+    }
+  </style>
+</head>
+<body class="p-5 pb-24 overflow-y-auto max-w-[412px] mx-auto w-full flex flex-col justify-between">
+
+  <!-- TOP BAR -->
+  <header class="flex items-center justify-between pb-3 pt-1 border-b border-[#E8EFEA]">
+    <div class="flex items-center gap-3">
+      <button onclick="goBack()" class="w-10 h-10 rounded-full bg-[#F4F7F5] flex items-center justify-center text-[#12201A] active:scale-95 transition-transform" title="Back to games">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-[#12201A]">Memory Match</h1>
+        <p class="text-xs text-[#527863] font-medium">Find matching vector patterns</p>
+      </div>
+    </div>
+
+    <!-- Progress Dots -->
+    <div class="flex items-center gap-1.5" id="progress-dots"></div>
+  </header>
+
+  <!-- STATS RIBBON -->
+  <div class="flex items-center justify-between py-2.5 px-3.5 bg-[#F8FAF9] rounded-2xl my-2 border border-[#E3ECE7]">
+    <div class="flex items-center gap-2">
+      <!-- Minimalist Check vector icon -->
+      <svg class="w-4 h-4 text-[#2E9E63]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      <span class="text-xs font-semibold text-[#527863]">Matched: <strong id="matched-count" class="text-[#12201A] font-bold text-sm">0</strong> of 8</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-xs font-medium text-[#527863]">Taps: <span id="move-count" class="text-[#12201A] font-bold">0</span></span>
+      <button onclick="resetGame()" class="text-xs text-[#2E9E63] font-bold hover:underline">Restart</button>
+    </div>
+  </div>
+
+  <!-- 4x4 GAME BOARD -->
+  <main class="flex-1 flex items-center justify-center my-2">
+    <div class="grid grid-cols-4 gap-2.5 w-full max-w-[360px]" id="game-board"></div>
+  </main>
+
+  <!-- BOTTOM HINT -->
+  <footer class="text-center py-2">
+    <p class="text-xs text-[#6B8C7A] font-medium" id="status-hint">
+      Tap any card to reveal its pattern
+    </p>
+  </footer>
+
+  <!-- COMPLETION CELEBRATION MODAL -->
+  <div id="celebration-overlay" class="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div class="w-20 h-20 bg-[#2E9E63] rounded-full flex items-center justify-center text-white mb-5 shadow-lg pulse-glow">
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+    </div>
+
+    <h2 class="text-3xl font-bold text-[#12201A] mb-2 tracking-tight">Pattern Complete!</h2>
+    <p class="text-base text-[#527863] max-w-xs mb-6 leading-relaxed">
+      You successfully paired all vector cards. Your mental agility and visual recall are active.
+    </p>
+
+    <!-- Score Summary Badge -->
+    <div class="bg-[#F4F7F5] border border-[#DCE5E0] rounded-2xl p-4 w-full max-w-xs mb-6 flex justify-around">
+      <div>
+        <div class="text-2xl font-bold text-[#2E9E63]" id="summary-accuracy">100%</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-semibold">Accuracy</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-bold text-[#12201A]" id="summary-time">30s</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-semibold">Time</div>
+      </div>
+      <div class="w-px bg-[#DCE5E0]"></div>
+      <div>
+        <div class="text-2xl font-bold text-[#2E9E63]" id="summary-cas">92</div>
+        <div class="text-[11px] text-[#6B8C7A] uppercase font-semibold">CAS Score</div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-col gap-3 w-full max-w-xs">
+      <button onclick="resetGame()" class="w-full h-14 bg-[#2E9E63] hover:bg-[#258552] text-white rounded-2xl font-semibold text-lg shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+        <span>Play Again</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+      <button onclick="goBack()" class="w-full h-12 bg-[#F4F7F5] hover:bg-[#EAF1ED] text-[#12201A] border border-[#DCE5E0] rounded-2xl font-medium text-base transition-all active:scale-[0.98]">
+        Back to Games Hub
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 8 Minimalist SVG Vector Art Icons (Pure geometric & botanical healthcare vectors)
+    const VECTOR_ICONS = [
+      {
+        name: 'Leaf',
+        color: '#2E9E63',
+        svg: '<svg class="vector-icon text-[#2E9E63]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 4 13a7 7 0 0 1 7-7c4 0 9 2 9 14-4 0-9-1-9-7"/></svg>'
+      },
+      {
+        name: 'Sun',
+        color: '#D97706',
+        svg: '<svg class="vector-icon text-[#D97706]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41m14.14-14.14l-1.41 1.41"/></svg>'
+      },
+      {
+        name: 'Droplet',
+        color: '#2563EB',
+        svg: '<svg class="vector-icon text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>'
+      },
+      {
+        name: 'Blossom',
+        color: '#DB2777',
+        svg: '<svg class="vector-icon text-[#DB2777]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2a4 4 0 0 0-4 4c0 3 4 6 4 6s4-3 4-6a4 4 0 0 0-4-4zm0 20a4 4 0 0 0 4-4c0-3-4-6-4-6s-4 3-4 6a4 4 0 0 0 4 4zm10-10a4 4 0 0 0-4-4c-3 0-6 4-6 4s3 4 6 4a4 4 0 0 0 4-4zm-20 0a4 4 0 0 0 4 4c3 0 6-4 6-4s-3-4-6-4a4 4 0 0 0-4 4z"/></svg>'
+      },
+      {
+        name: 'Star',
+        color: '#7C3AED',
+        svg: '<svg class="vector-icon text-[#7C3AED]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'
+      },
+      {
+        name: 'Moon',
+        color: '#4B5563',
+        svg: '<svg class="vector-icon text-[#4B5563]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+      },
+      {
+        name: 'Shield',
+        color: '#059669',
+        svg: '<svg class="vector-icon text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+      },
+      {
+        name: 'Heart',
+        color: '#E11D48',
+        svg: '<svg class="vector-icon text-[#E11D48]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
+      }
+    ];
+
+    let cards = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let totalMoves = 0;
+    let isLocked = false;
+    let startTime = null;
+
+    function initGame() {
+      // Create pairs of vector items and shuffle
+      const deck = [...VECTOR_ICONS, ...VECTOR_ICONS]
+        .map((item, index) => ({
+          id: index,
+          item,
+          isFlipped: false,
+          isMatched: false
+        }))
+        .sort(() => Math.random() - 0.5);
+
+      cards = deck;
+      flippedCards = [];
+      matchedPairs = 0;
+      totalMoves = 0;
+      isLocked = false;
+      startTime = Date.now();
+
+      updateStatsUI();
+      renderBoard();
+      renderProgressDots();
+
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function renderProgressDots() {
+      const container = document.getElementById('progress-dots');
+      container.innerHTML = '';
+      for (let i = 0; i < 8; i++) {
+        const dot = document.createElement('div');
+        dot.className = `w-2 h-2 rounded-full transition-all duration-300 ${i < matchedPairs ? 'bg-[#2E9E63] scale-110' : 'bg-[#DCE5E0]'}`;
+        container.appendChild(dot);
+      }
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('game-board');
+      board.innerHTML = '';
+
+      cards.forEach((card, index) => {
+        const scene = document.createElement('div');
+        scene.className = 'card-scene';
+
+        const inner = document.createElement('div');
+        inner.className = `card-inner ${card.isFlipped ? 'is-flipped' : ''} ${card.isMatched ? 'is-matched' : ''}`;
+        inner.setAttribute('data-index', index);
+        inner.onclick = () => handleCardClick(index);
+
+        // Back face (minimal geometric pattern)
+        const back = document.createElement('div');
+        back.className = 'card-face card-back';
+        back.innerHTML = `
+          <div class="w-8 h-8 rounded-xl bg-white/70 border border-[#DCE5E0] flex items-center justify-center text-[#2E9E63]">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 4"/></svg>
+          </div>
+        `;
+
+        // Front face (Minimalist Vector Art)
+        const front = document.createElement('div');
+        front.className = 'card-face card-front';
+        front.innerHTML = card.item.svg;
+
+        inner.appendChild(back);
+        inner.appendChild(front);
+        scene.appendChild(inner);
+        board.appendChild(scene);
+      });
+    }
+
+    function handleCardClick(index) {
+      if (isLocked) return;
+      const card = cards[index];
+
+      if (card.isFlipped || card.isMatched) return;
+
+      if (window.careLoopSound) window.careLoopSound.playCardFlip();
+
+      card.isFlipped = true;
+      flippedCards.push({ card, index });
+
+      const cardElem = document.querySelector(`.card-inner[data-index="${index}"]`);
+      if (cardElem) cardElem.classList.add('is-flipped');
+
+      if (flippedCards.length === 1) {
+        document.getElementById('status-hint').textContent = `Looking for ${card.item.name}...`;
+      } else if (flippedCards.length === 2) {
+        totalMoves++;
+        updateStatsUI();
+        checkMatch();
+      }
+    }
+
+    function checkMatch() {
+      isLocked = true;
+      const [first, second] = flippedCards;
+
+      if (first.card.item.name === second.card.item.name) {
+        matchedPairs++;
+        first.card.isMatched = true;
+        second.card.isMatched = true;
+
+        if (window.careLoopSound) window.careLoopSound.playMatch();
+
+        setTimeout(() => {
+          const el1 = document.querySelector(`.card-inner[data-index="${first.index}"]`);
+          const el2 = document.querySelector(`.card-inner[data-index="${second.index}"]`);
+          if (el1) el1.classList.add('is-matched');
+          if (el2) el2.classList.add('is-matched');
+
+          flippedCards = [];
+          isLocked = false;
+          updateStatsUI();
+          renderProgressDots();
+
+          document.getElementById('status-hint').textContent = `Matched ${first.card.item.name}!`;
+
+          if (matchedPairs === 8) {
+            handleVictory();
+          }
+        }, 350);
+
+      } else {
+        if (window.careLoopSound) window.careLoopSound.playMismatch();
+
+        setTimeout(() => {
+          first.card.isFlipped = false;
+          second.card.isFlipped = false;
+
+          const el1 = document.querySelector(`.card-inner[data-index="${first.index}"]`);
+          const el2 = document.querySelector(`.card-inner[data-index="${second.index}"]`);
+          if (el1) el1.classList.remove('is-flipped');
+          if (el2) el2.classList.remove('is-flipped');
+
+          flippedCards = [];
+          isLocked = false;
+          document.getElementById('status-hint').textContent = "Try another pattern";
+        }, 850);
+      }
+    }
+
+    function updateStatsUI() {
+      document.getElementById('matched-count').textContent = matchedPairs;
+      document.getElementById('move-count').textContent = totalMoves;
+    }
+
+    function handleVictory() {
+      const elapsedSec = Math.max(12, Math.round((Date.now() - startTime) / 1000));
+      const accuracy = Math.min(100, Math.round((8 / totalMoves) * 100));
+      const casScore = Math.min(99, Math.round((accuracy * 0.7) + (Math.max(10, 100 - elapsedSec) * 0.3)));
+
+      document.getElementById('summary-accuracy').textContent = accuracy + '%';
+      document.getElementById('summary-time').textContent = elapsedSec + 's';
+      document.getElementById('summary-cas').textContent = casScore;
+
+      if (window.careLoopSound) {
+        setTimeout(() => window.careLoopSound.playMatch(), 200);
+      }
+
+      if (window.careLoopApi) {
+        window.careLoopApi.recordGame({
+          gameType: 'memory-match',
+          gameTitle: 'Memory Match',
+          accuracy,
+          durationSec: elapsedSec,
+          moves: totalMoves
+        });
+      }
+
+      if (window.CareLoopGameState) {
+        window.CareLoopGameState.addResult({
+          gameName: 'Memory Match',
+          gameType: 'memory-match',
+          score: accuracy,
+          durationSec: elapsedSec,
+          moves: totalMoves
+        });
+      }
+
+      const overlay = document.getElementById('celebration-overlay');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function resetGame() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      initGame();
+    }
+
+    function goBack() {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (window.careLoopSound) window.careLoopSound.playClick();
+      window.location.href = '03-cognitive-games-hub.html';
+      window.parent.postMessage({
+        type: 'navigate',
+        route: { role: 'patient', file: '03-cognitive-games-hub.html', id: '03' }
+      }, '*');
+    }
+
+    window.addEventListener('beforeunload', () => {
+      if (window.VoiceManager) window.VoiceManager.stop();
+      else if (window.speechSynthesis) window.speechSynthesis.cancel();
+    });
+
+    window.addEventListener('DOMContentLoaded', initGame);
+  </script>
+</body>
+</html>
