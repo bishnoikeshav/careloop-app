@@ -11,7 +11,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
  * - Reads response aloud via window.speechSynthesis
  */
 
-const GROQ_API_KEY = (typeof window !== 'undefined' && (window.CARELOOP_GROQ_KEY || localStorage.getItem('careloop_groq_key'))) || process.env.REACT_APP_GROQ_API_KEY || "";
+const GROQ_API_KEY =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) ||
+  (typeof window !== 'undefined' && (window.CARELOOP_GROQ_KEY || localStorage.getItem('careloop_groq_key'))) ||
+  process.env.REACT_APP_GROQ_API_KEY ||
+  "";
 const SYSTEM_PROMPT = "You are a warm, patient, and friendly companion for an elderly user in India. Keep all answers under two short sentences. Use simple, everyday language. You are not a doctor. If the user asks for medical advice, gently remind them to ask their family or caregiver. Never say 'I am an AI.' Always be encouraging.";
 
 export default function VoiceAssistant() {

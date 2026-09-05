@@ -32,7 +32,11 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
-    const GROQ_API_KEY = (typeof window !== 'undefined' && (window.CARELOOP_GROQ_KEY || localStorage.getItem('careloop_groq_key'))) || "";
+    const GROQ_API_KEY =
+      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) ||
+      (typeof window !== 'undefined' && (window.CARELOOP_GROQ_KEY || localStorage.getItem('careloop_groq_key'))) ||
+      (typeof process !== 'undefined' && process.env?.REACT_APP_GROQ_API_KEY) ||
+      "";
     const LANG_NAMES = {
       en: "English",
       hi: "Hindi (हिन्दी)",
