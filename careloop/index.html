@@ -574,10 +574,10 @@
 
 <!-- ═══ PROTOTYPE DEMO AUTH MODAL (Non-blocking popup) ═══ -->
 <div id="auth-overlay" onclick="handleAuthBackdropClick(event)" style="position:fixed; inset:0; z-index:99999; background:rgba(11,13,12,0.85); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; padding:16px;">
-  <div style="width:100%; max-width:440px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:20px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); color:var(--text-primary); font-family:'Inter',sans-serif;">
+  <div id="auth-modal-card" style="width:100%; max-width:460px; max-height:92vh; display:flex; flex-direction:column; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:20px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); color:var(--text-primary); font-family:'Inter',sans-serif; transition:max-width 200ms ease;">
     
     <!-- Top Brand Header & Stepper with Close Button -->
-    <div style="padding:14px 20px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;">
+    <div style="padding:14px 20px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
       <div style="display:flex; align-items:center; gap:10px;">
         <div style="width:32px; height:32px; border-radius:8px; background:rgba(74,222,148,0.15); border:1px solid rgba(74,222,148,0.3); display:flex; align-items:center; justify-content:center; color:var(--accent);">
           <span class="material-symbols-outlined" style="font-size:18px;">spa</span>
@@ -608,8 +608,8 @@
       </div>
     </div>
 
-    <!-- Container for Steps -->
-    <div style="padding:22px 26px;">
+    <!-- Container for Steps (Scrollable to prevent hidden action buttons) -->
+    <div id="auth-modal-scroll" style="padding:22px 26px; overflow-y:auto; flex:1; overscroll-behavior:contain;">
 
       <!-- Error / Status Message Banner -->
       <div id="auth-status-banner" style="display:none; margin-bottom:14px; padding:12px 14px; border-radius:10px; font-size:12.5px; line-height:1.4;"></div>
@@ -734,55 +734,131 @@
         </div>
       </div>
 
-      <!-- STEP 3: PROFILE ONBOARDING -->
+      <!-- STEP PASSWORD: POST-OTP PASSWORD SETUP -->
+      <div id="auth-step-password" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#4ADE94; font-weight:600;">
+            <span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> OTP Verified
+          </span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-secondary);">SECURITY SETUP</span>
+        </div>
+
+        <h2 style="font-size:19px; font-weight:700; margin-bottom:4px; color:var(--text-primary);">Create Permanent Password</h2>
+        <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.4;">
+          Establish a password so you can sign in directly on your subsequent visits without waiting for an email code.
+        </p>
+
+        <form onsubmit="handleAuthSetPasswordSubmit(event)">
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:5px; font-weight:600;">CREATE PASSWORD (MIN 6 CHARACTERS)</label>
+            <div style="position:relative;">
+              <input type="password" id="auth-new-password" required minlength="6" placeholder="Enter new password" style="width:100%; min-height:48px; height:48px; padding:0 12px 0 38px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:13.5px; outline:none; font-family:'Inter',sans-serif;"/>
+              <span class="material-symbols-outlined" style="position:absolute; left:10px; top:14px; font-size:18px; color:var(--text-secondary);">lock</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:5px; font-weight:600;">CONFIRM PASSWORD</label>
+            <div style="position:relative;">
+              <input type="password" id="auth-confirm-password" required minlength="6" placeholder="Re-enter password" style="width:100%; min-height:48px; height:48px; padding:0 12px 0 38px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:13.5px; outline:none; font-family:'Inter',sans-serif;"/>
+              <span class="material-symbols-outlined" style="position:absolute; left:10px; top:14px; font-size:18px; color:var(--text-secondary);">lock_reset</span>
+            </div>
+          </div>
+
+          <button type="submit" id="auth-save-password-btn" style="width:100%; min-height:50px; height:50px; border-radius:12px; background:var(--accent); color:#0B0D0C; font-weight:700; font-size:14px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 150ms; margin-bottom:12px;">
+            <span>Save Password &amp; Continue</span>
+            <span class="material-symbols-outlined" style="font-size:18px;">arrow_forward</span>
+          </button>
+
+          <div style="text-align:center;">
+            <button type="button" onclick="goToAuthStep(3)" style="background:none; border:none; color:var(--text-secondary); font-size:11.5px; cursor:pointer; text-decoration:underline;">
+              Skip for now (continue with OTP exclusively)
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- STEP 3: DUAL-COLUMN PROFILE ONBOARDING -->
       <div id="auth-step-3" style="display:none;">
         <h2 style="font-size:20px; font-weight:700; margin-bottom:4px; color:var(--text-primary);">Profile Onboarding</h2>
-        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px; line-height:1.4;">Pre-filled from your demo selection. Review and enter the application.</p>
+        <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.4;">Configure both patient and caregiver details to customize daily assistance, games, and emergency alerts.</p>
 
-        <form onsubmit="handleAuthProfileSubmit(event)">
-          <div style="margin-bottom:12px;">
-            <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">FULL NAME</label>
-            <input type="text" id="auth-fullname-input" value="Rahul" required style="width:100%; height:44px; padding:0 12px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13.5px; outline:none;" oninput="validateProfileForm()"/>
-          </div>
-
-          <div style="margin-bottom:14px;">
-            <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">AGE</label>
-            <input type="number" id="auth-age-input" min="1" max="120" value="45" required style="width:100%; height:44px; padding:0 12px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13.5px; outline:none;" oninput="validateProfileForm()"/>
-          </div>
-
-          <!-- Role Selector -->
-          <div style="margin-bottom:18px;">
-            <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:8px; font-weight:600;">ROLE</label>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <div id="role-card-caregiver" onclick="selectAuthRole('caregiver')" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px; border:2px solid var(--accent); background:rgba(74,222,148,0.1); cursor:pointer;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                  <span class="material-symbols-outlined" style="font-size:20px; color:var(--accent);">supervisor_account</span>
-                  <div>
-                    <div style="font-weight:700; font-size:13px; color:var(--text-primary);">Caregiver</div>
-                    <div style="font-size:11px; color:var(--text-secondary);">Setting up for a loved one</div>
-                  </div>
-                </div>
-                <div id="role-dot-caregiver" style="width:16px; height:16px; border-radius:50%; border:2px solid var(--accent); background:var(--accent); display:flex; align-items:center; justify-content:center;">
-                  <div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>
-                </div>
+        <form id="auth-profile-form" onsubmit="handleAuthProfileSubmit(event)">
+          <!-- Dual Column Grid -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:18px;">
+            <!-- Column 1: Patient Details -->
+            <div style="padding:14px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:14px;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px; font-weight:700; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px;">
+                <span class="material-symbols-outlined" style="font-size:17px;">elderly</span>
+                <span>Patient Details</span>
               </div>
 
-              <div id="role-card-patient" onclick="selectAuthRole('patient')" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px; border:1px solid var(--border-subtle); background:var(--bg-surface-raised); cursor:pointer;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                  <span class="material-symbols-outlined" style="font-size:20px; color:var(--text-secondary);">elderly</span>
-                  <div>
-                    <div style="font-weight:700; font-size:13px; color:var(--text-primary);">Patient</div>
-                    <div style="font-size:11px; color:var(--text-secondary);">Using this for myself</div>
-                  </div>
-                </div>
-                <div id="role-dot-patient" style="width:16px; height:16px; border-radius:50%; border:2px solid var(--border-subtle); background:transparent;"></div>
+              <div style="margin-bottom:10px;">
+                <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">Patient Name *</label>
+                <input type="text" id="auth-patient-name" value="Kamala Sharma" required style="width:100%; min-height:44px; height:44px; padding:0 10px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13px; outline:none;"/>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">Age *</label>
+                <input type="number" id="auth-patient-age" min="1" max="125" value="74" required style="width:100%; min-height:44px; height:44px; padding:0 10px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13px; outline:none;"/>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">Preferred Language</label>
+                <select id="auth-patient-language" style="width:100%; min-height:44px; height:44px; padding:0 10px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13px; outline:none; cursor:pointer;">
+                  <option value="en" selected>English</option>
+                  <option value="as">অসমীয়া (Assamese)</option>
+                  <option value="brx">बड़ो (Bodo)</option>
+                  <option value="hi">हिन्दी (Hindi)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">Cognitive Stage / Notes</label>
+                <input type="text" id="auth-patient-notes" value="Mild Memory Loss (Early Care)" placeholder="e.g. Mild memory loss" style="width:100%; min-height:44px; height:44px; padding:0 10px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13px; outline:none;"/>
+              </div>
+            </div>
+
+            <!-- Column 2: Caregiver Details -->
+            <div style="padding:14px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:14px;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px; font-weight:700; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px;">
+                <span class="material-symbols-outlined" style="font-size:17px;">supervisor_account</span>
+                <span>Caregiver Details</span>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">Caregiver Name *</label>
+                <input type="text" id="auth-caregiver-name" value="Rahul Sharma" required style="width:100%; min-height:44px; height:44px; padding:0 10px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13px; outline:none;"/>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">Relationship</label>
+                <select id="auth-caregiver-relation" style="width:100%; min-height:44px; height:44px; padding:0 10px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13px; outline:none; cursor:pointer;">
+                  <option value="Daughter" selected>Daughter</option>
+                  <option value="Son">Son</option>
+                  <option value="Spouse">Spouse</option>
+                  <option value="Sister">Sister</option>
+                  <option value="Brother">Brother</option>
+                  <option value="Healthcare Aide">Healthcare Aide / Nurse</option>
+                  <option value="Other">Other Family / Guardian</option>
+                </select>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">Emergency Contact Phone *</label>
+                <input type="tel" id="auth-caregiver-phone" value="+91 98765 43210" required style="width:100%; min-height:44px; height:44px; padding:0 10px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13px; outline:none;"/>
+              </div>
+
+              <div style="font-size:10.5px; color:var(--text-secondary); line-height:1.3; padding:6px 8px; background:rgba(74,222,148,0.08); border-radius:6px; border:1px solid rgba(74,222,148,0.2);">
+                Pinned as primary one-touch speed dial for the patient.
               </div>
             </div>
           </div>
 
-          <button type="submit" id="auth-complete-btn" style="width:100%; height:52px; border-radius:12px; background:var(--accent); color:#0B0D0C; font-weight:700; font-size:15px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 150ms;">
-            <span>Save &amp; Enter App</span>
-            <span class="material-symbols-outlined" style="font-size:18px;">login</span>
+          <!-- Save Button (Prominent, 56px height, responsive) -->
+          <button type="submit" id="auth-complete-btn" style="width:100%; min-height:54px; height:54px; border-radius:12px; background:var(--accent); color:#0B0D0C; font-weight:700; font-size:15px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 150ms; box-shadow:0 4px 14px rgba(74,222,148,0.3);">
+            <span id="auth-complete-btn-text">Save Profile &amp; Enter App</span>
+            <span class="material-symbols-outlined" style="font-size:20px;">login</span>
           </button>
         </form>
       </div>
@@ -1346,11 +1422,8 @@
       clearInterval(otpCooldownTimer);
       otpCooldownTimer = null;
 
-      // Pre-fill profile name in Step 3
-      const nameInput = document.getElementById('auth-fullname-input');
-      if (nameInput) nameInput.value = displayName;
-
-      goToAuthStep(3);
+      // Immediately advance to password creation screen
+      goToAuthStep('password');
     } catch (err) {
       showAuthStatus(friendlyAuthError(err));
     } finally {
@@ -1391,6 +1464,56 @@
     } catch(err) {
       showAuthStatus(friendlyAuthError(err));
       if (resendBtn) { resendBtn.disabled = false; resendBtn.textContent = 'Resend Code'; }
+    }
+  }
+
+  // POST-OTP PASSWORD CREATION SUBMIT
+  async function handleAuthSetPasswordSubmit(e) {
+    if (e) e.preventDefault();
+    clearAuthStatus();
+
+    const newPassInput = document.getElementById('auth-new-password');
+    const confirmPassInput = document.getElementById('auth-confirm-password');
+    const newPass = newPassInput ? newPassInput.value : '';
+    const confirmPass = confirmPassInput ? confirmPassInput.value : '';
+
+    if (!newPass || newPass.length < 6) {
+      showAuthStatus('Password must be at least 6 characters long.');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      showAuthStatus('Passwords do not match. Please verify your entries.');
+      return;
+    }
+
+    const btn = document.getElementById('auth-save-password-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Saving Credentials...';
+    }
+
+    try {
+      const client = window.CareLoopSupabase || window.supabaseClient;
+      if (client) {
+        const { error } = await client.auth.updateUser({
+          password: newPass,
+          data: { has_password: true, has_set_password: true }
+        });
+        if (error) {
+          showAuthStatus(friendlyAuthError(error));
+          if (btn) { btn.disabled = false; btn.textContent = 'Save Password & Continue'; }
+          return;
+        }
+      }
+      try { window.careLoopSound?.playSuccess?.(); } catch (_) {}
+      goToAuthStep(3);
+    } catch (err) {
+      showAuthStatus(friendlyAuthError(err));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Save Password & Continue';
+      }
     }
   }
 
@@ -1469,17 +1592,25 @@
     clearAuthStatus();
     const s1 = document.getElementById('auth-step-1');
     const s2 = document.getElementById('auth-step-2');
+    const sp = document.getElementById('auth-step-password');
     const s3 = document.getElementById('auth-step-3');
+    const card = document.getElementById('auth-modal-card');
+
     if (s1) s1.style.display = step === 1 ? 'block' : 'none';
     if (s2) s2.style.display = step === 2 ? 'block' : 'none';
+    if (sp) sp.style.display = step === 'password' ? 'block' : 'none';
     if (s3) s3.style.display = step === 3 ? 'block' : 'none';
+
+    if (card) {
+      card.style.maxWidth = step === 3 ? '680px' : '460px';
+    }
 
     const d1 = document.getElementById('auth-dot-1');
     const d2 = document.getElementById('auth-dot-2');
     const d3 = document.getElementById('auth-dot-3');
-    if (d1) d1.style.background = step >= 1 ? 'var(--accent)' : 'var(--border-subtle)';
-    if (d2) d2.style.background = step >= 2 ? 'var(--accent)' : 'var(--border-subtle)';
-    if (d3) d3.style.background = step >= 3 ? 'var(--accent)' : 'var(--border-subtle)';
+    if (d1) d1.style.background = (step === 1 || step === 2 || step === 'password' || step === 3) ? 'var(--accent)' : 'var(--border-subtle)';
+    if (d2) d2.style.background = (step === 2 || step === 'password' || step === 3) ? 'var(--accent)' : 'var(--border-subtle)';
+    if (d3) d3.style.background = (step === 3) ? 'var(--accent)' : 'var(--border-subtle)';
 
     if (step === 2) {
       const tokenInput = document.getElementById('auth-token-input');
@@ -1487,135 +1618,161 @@
         tokenInput.value = '';
         setTimeout(() => tokenInput.focus(), 200);
       }
-    } else if (step === 3) {
-      const nameInput = document.getElementById('auth-fullname-input');
-      const ageInput = document.getElementById('auth-age-input');
-      if (authPendingEmail && (!nameInput || !nameInput.value)) {
-        if (nameInput) nameInput.value = authPendingEmail.split('@')[0];
-      }
-      validateProfileForm();
-    }
-  }
-
-  function selectAuthRole(role) {
-    authSelectedRole = role;
-    const cardCaregiver = document.getElementById('role-card-caregiver');
-    const cardPatient = document.getElementById('role-card-patient');
-    const dotCaregiver = document.getElementById('role-dot-caregiver');
-    const dotPatient = document.getElementById('role-dot-patient');
-
-    if (role === 'caregiver') {
-      if (cardCaregiver) {
-        cardCaregiver.style.borderColor = 'var(--accent)';
-        cardCaregiver.style.background = 'rgba(74,222,148,0.1)';
-      }
-      if (cardPatient) {
-        cardPatient.style.borderColor = 'var(--border-subtle)';
-        cardPatient.style.background = 'var(--bg-surface-raised)';
-      }
-      if (dotCaregiver) {
-        dotCaregiver.style.borderColor = 'var(--accent)';
-        dotCaregiver.style.background = 'var(--accent)';
-        dotCaregiver.innerHTML = '<div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>';
-      }
-      if (dotPatient) {
-        dotPatient.style.borderColor = 'var(--border-subtle)';
-        dotPatient.style.background = 'transparent';
-        dotPatient.innerHTML = '';
-      }
-    } else {
-      if (cardPatient) {
-        cardPatient.style.borderColor = 'var(--accent)';
-        cardPatient.style.background = 'rgba(74,222,148,0.1)';
-      }
-      if (cardCaregiver) {
-        cardCaregiver.style.borderColor = 'var(--border-subtle)';
-        cardCaregiver.style.background = 'var(--bg-surface-raised)';
-      }
-      if (dotPatient) {
-        dotPatient.style.borderColor = 'var(--accent)';
-        dotPatient.style.background = 'var(--accent)';
-        dotPatient.innerHTML = '<div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>';
-      }
-      if (dotCaregiver) {
-        dotCaregiver.style.borderColor = 'var(--border-subtle)';
-        dotCaregiver.style.background = 'transparent';
-        dotCaregiver.innerHTML = '';
+    } else if (step === 'password') {
+      const passInput = document.getElementById('auth-new-password');
+      if (passInput) {
+        passInput.value = '';
+        setTimeout(() => passInput.focus(), 200);
       }
     }
   }
 
-  function validateProfileForm() {
-    const nameInput = document.getElementById('auth-fullname-input');
-    const ageInput = document.getElementById('auth-age-input');
-    const btn = document.getElementById('auth-complete-btn');
-
-    const name = nameInput ? nameInput.value.trim() : '';
-    const age = ageInput ? parseInt(ageInput.value, 10) : 0;
-    const isValid = name.length > 0 && age > 0;
-
-    if (btn) {
-      btn.disabled = !isValid;
-      btn.style.opacity = isValid ? '1' : '0.5';
-      btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
-    }
-    return isValid;
-  }
-
-  function handleAuthProfileSubmit(e) {
+  // DUAL-COLUMN PROFILE FORM SUBMISSION (Patient + Caregiver Details)
+  async function handleAuthProfileSubmit(e) {
     if (e) e.preventDefault();
-    const nameInput = document.getElementById('auth-fullname-input');
-    const ageInput = document.getElementById('auth-age-input');
-    const name = nameInput && nameInput.value.trim() ? nameInput.value.trim() : (selectedDemoRole === 'caregiver' ? 'Rahul Sharma' : 'Keshav Sharma');
-    const age = ageInput && ageInput.value ? parseInt(ageInput.value, 10) : (selectedDemoRole === 'caregiver' ? 45 : 74);
-    const role = authSelectedRole || selectedDemoRole;
-    const initial = name.charAt(0).toUpperCase();
+    clearAuthStatus();
 
-    currentUser = {
-      name: name,
-      age: age,
-      role: role,
-      initials: initial
+    const pNameInput = document.getElementById('auth-patient-name');
+    const pAgeInput = document.getElementById('auth-patient-age');
+    const pLangInput = document.getElementById('auth-patient-language');
+    const pNotesInput = document.getElementById('auth-patient-notes');
+
+    const cNameInput = document.getElementById('auth-caregiver-name');
+    const cRelInput = document.getElementById('auth-caregiver-relation');
+    const cPhoneInput = document.getElementById('auth-caregiver-phone');
+
+    const patientName = pNameInput ? pNameInput.value.trim() : '';
+    const patientAge = pAgeInput ? parseInt(pAgeInput.value, 10) : 0;
+    const preferredLanguage = pLangInput ? pLangInput.value : 'en';
+    const cognitiveNotes = pNotesInput ? pNotesInput.value.trim() : '';
+
+    const caregiverName = cNameInput ? cNameInput.value.trim() : '';
+    const caregiverRelationship = cRelInput ? cRelInput.value : 'Daughter';
+    const caregiverPhone = cPhoneInput ? cPhoneInput.value.trim() : '';
+
+    if (!patientName) {
+      showAuthStatus("Please enter the patient's full name.");
+      return;
+    }
+    if (!patientAge || patientAge < 1 || patientAge > 125) {
+      showAuthStatus("Please enter a valid patient age between 1 and 125.");
+      return;
+    }
+    if (!caregiverName) {
+      showAuthStatus("Please enter the caregiver's full name.");
+      return;
+    }
+    if (!caregiverPhone) {
+      showAuthStatus("Please enter an emergency contact phone number for the caregiver.");
+      return;
+    }
+
+    const btn = document.getElementById('auth-complete-btn');
+    const btnText = document.getElementById('auth-complete-btn-text');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
+    if (btnText) btnText.textContent = 'Saving Profile...';
+
+    const client = window.CareLoopSupabase || window.supabaseClient;
+    let userId = null;
+    try {
+      if (client) {
+        const { data: { user } } = await client.auth.getUser();
+        userId = user ? user.id : null;
+      }
+    } catch (_) {}
+
+    if (!userId) {
+      userId = localStorage.getItem('careloop_profile_id') || ('user_' + Date.now());
+      localStorage.setItem('careloop_profile_id', userId);
+    }
+
+    const profilePayload = {
+      id: userId,
+      patient_name: patientName,
+      patient_age: patientAge,
+      preferred_language: preferredLanguage,
+      cognitive_notes: cognitiveNotes,
+      caregiver_name: caregiverName,
+      caregiver_relationship: caregiverRelationship,
+      caregiver_phone: caregiverPhone
     };
 
-    localStorage.setItem('careloop_authenticated', 'true');
-    localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
-    localStorage.setItem('careloop_patient_name', name);
-    localStorage.setItem('careloop_user_role', role);
-
-    if (window.CareLoopSync && window.CareLoopSync.upsertProfile) {
-      window.CareLoopSync.upsertProfile({
-        name: name,
-        age: age,
-        role: role,
-        initials: initial,
-        language: localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en'
-      }).catch(function(err) {
-        console.warn('[Supabase] Profile upsert failed (cached locally):', err);
-      });
-    }
-
-    if (window.careLoopSound) window.careLoopSound.playSuccess();
-    applyAuthenticatedProfile(currentUser);
-    closeLoginModal();
-
-    isAuthenticated = true;
-
-    // Broadcast update to child iframe frames
-    const frame = document.getElementById('frame');
-    const mobileFrame = document.getElementById('mobile-frame');
     try {
-      if (frame && frame.contentWindow) {
-        frame.contentWindow.postMessage({ type: 'patientUpdated', name: name, role: role }, '*');
-      }
-      if (mobileFrame && mobileFrame.contentWindow) {
-        mobileFrame.contentWindow.postMessage({ type: 'patientUpdated', name: name, role: role }, '*');
-      }
-    } catch(err) {}
+      if (client) {
+        const { error: upsertErr } = await client.from('profiles').upsert(profilePayload, { onConflict: 'id' });
+        if (upsertErr) {
+          if (upsertErr.code === '42703') {
+            await client.from('profiles').upsert({
+              id: userId,
+              name: patientName,
+              age: patientAge,
+              role: 'patient',
+              preferred_language: preferredLanguage
+            }, { onConflict: 'id' });
+          } else {
+            throw upsertErr;
+          }
+        }
 
-    // Stay on Patient Home Screen and update greeting
-    setRole('patient');
-    patientNav('01-patient-home.html', '01');
+        try {
+          await client.auth.updateUser({
+            data: {
+              patient_name: patientName,
+              patient_age: patientAge,
+              preferred_language: preferredLanguage,
+              cognitive_notes: cognitiveNotes,
+              caregiver_name: caregiverName,
+              caregiver_relationship: caregiverRelationship,
+              caregiver_phone: caregiverPhone,
+              full_name: caregiverName || patientName
+            }
+          });
+        } catch (_) {}
+      }
+
+      currentUser = {
+        name: patientName,
+        age: patientAge,
+        role: 'caregiver',
+        initials: (patientName.charAt(0) || 'K').toUpperCase(),
+        patient_name: patientName,
+        caregiver_name: caregiverName,
+        preferred_language: preferredLanguage
+      };
+
+      localStorage.setItem('careloop_authenticated', 'true');
+      localStorage.setItem('careloop_user_profile', JSON.stringify(profilePayload));
+      localStorage.setItem('careloop_patient_name', patientName);
+      localStorage.setItem('careloop_app_language', preferredLanguage);
+      localStorage.setItem('careloop_lang', preferredLanguage);
+      localStorage.setItem('careloop_user_role', 'caregiver');
+
+      try { window.careLoopSound?.playSuccess?.(); } catch (_) {}
+      applyAuthenticatedProfile(currentUser);
+      closeLoginModal();
+      isAuthenticated = true;
+
+      // Broadcast update to child iframe frames
+      const frame = document.getElementById('frame');
+      const mobileFrame = document.getElementById('mobile-frame');
+      try {
+        if (frame && frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: 'patientUpdated', name: patientName, role: 'caregiver' }, '*');
+        }
+        if (mobileFrame && mobileFrame.contentWindow) {
+          mobileFrame.contentWindow.postMessage({ type: 'patientUpdated', name: patientName, role: 'caregiver' }, '*');
+        }
+      } catch (_) {}
+
+      setRole('patient');
+      patientNav('01-patient-home.html', '01');
+    } catch (err) {
+      console.error('[CareLoop] Profile upsert error:', err);
+      showAuthStatus(err.message || 'Could not save profile to Supabase. Please try again.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      if (btnText) btnText.textContent = 'Save Profile & Enter App';
+    }
   }
 
   function applyAuthenticatedProfile(profile) {

@@ -1,16 +1,17 @@
 import { supabase } from '../supabaseClient.js';
 
 /**
- * CareLoop Authentication Service
- * ===============================
+ * CareLoop Authentication & Profile Service
+ * =========================================
  * Handles Supabase Email OTP authentication, password management,
- * and session state management with safe error mapping.
+ * returning-user password login, dual-column profile onboarding upsert,
+ * and session state management with user-friendly error mapping.
  */
 
 /**
  * Sends a 6-digit numeric OTP to the provided email address.
  * @param {string} email
- * @returns {Promise<{ data: any, error: any }>}
+ * @returns {Promise<any>}
  */
 export async function sendEmailOtp(email) {
   if (!email || !email.includes('@')) {
@@ -62,7 +63,7 @@ export async function verifyEmailOtp(email, token) {
 
 /**
  * Updates the current authenticated user's permanent password.
- * Also flags `has_password: true` in user_metadata so future logins can detect it.
+ * Also flags `has_password: true` in user_metadata for future login detection.
  * @param {string} newPassword
  * @returns {Promise<{ user: any }>}
  */
@@ -107,6 +108,89 @@ export async function signInWithPassword(email, password) {
   }
 
   return data;
+}
+
+/**
+ * Upserts dual patient and caregiver profile details into Supabase `profiles` table.
+ * Fields: id, patient_name, patient_age, preferred_language, cognitive_notes,
+ * caregiver_name, caregiver_relationship, caregiver_phone.
+ *
+ * Includes graceful schema adaptation if custom columns are pending database migration,
+ * and mirrors data to Supabase auth metadata and localStorage for offline resilience.
+ *
+ * @param {Object} profileData
+ * @returns {Promise<Object>}
+ */
+export async function upsertProfile(profileData) {
+  if (!profileData || !profileData.id) {
+    throw new Error('User session ID is missing. Please authenticate first.');
+  }
+
+  const payload = {
+    id: profileData.id,
+    patient_name: (profileData.patient_name || '').trim(),
+    patient_age: parseInt(profileData.patient_age, 10) || null,
+    preferred_language: profileData.preferred_language || 'en',
+    cognitive_notes: (profileData.cognitive_notes || '').trim(),
+    caregiver_name: (profileData.caregiver_name || '').trim(),
+    caregiver_relationship: profileData.caregiver_relationship || 'Daughter',
+    caregiver_phone: (profileData.caregiver_phone || '').trim()
+  };
+
+  // 1. Attempt direct upsert into Supabase `profiles` table with matching user ID
+  const { data, error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' });
+
+  if (error) {
+    // If table is using the legacy columns (column does not exist: 42703)
+    if (error.code === '42703') {
+      console.warn('[authService] Custom columns not yet migrated in Postgres schema, using adaptive fallback:', error.message);
+      const adaptivePayload = {
+        id: payload.id,
+        name: payload.patient_name || 'Patient',
+        age: payload.patient_age || 70,
+        role: 'patient',
+        preferred_language: payload.preferred_language
+      };
+      const fallbackRes = await supabase.from('profiles').upsert(adaptivePayload, { onConflict: 'id' });
+      if (fallbackRes.error) {
+        throw fallbackRes.error;
+      }
+    } else {
+      throw error;
+    }
+  }
+
+  // 2. Persist full dual details to auth metadata so user info is immediately available in session
+  try {
+    await supabase.auth.updateUser({
+      data: {
+        patient_name: payload.patient_name,
+        patient_age: payload.patient_age,
+        preferred_language: payload.preferred_language,
+        cognitive_notes: payload.cognitive_notes,
+        caregiver_name: payload.caregiver_name,
+        caregiver_relationship: payload.caregiver_relationship,
+        caregiver_phone: payload.caregiver_phone,
+        full_name: payload.caregiver_name || payload.patient_name
+      }
+    });
+  } catch (metaErr) {
+    console.warn('[authService] Auth metadata sync warning:', metaErr.message);
+  }
+
+  // 3. Mirror to localStorage for offline availability and immediate dashboard reflection
+  try {
+    localStorage.setItem('careloop_user_profile', JSON.stringify(payload));
+    localStorage.setItem('careloop_patient_name', payload.patient_name || 'Kamala Sharma');
+    localStorage.setItem('careloop_app_language', payload.preferred_language || 'en');
+    localStorage.setItem('careloop_lang', payload.preferred_language || 'en');
+    localStorage.setItem('careloop_user_role', 'caregiver');
+    localStorage.setItem('careloop_authenticated', 'true');
+  } catch (storageErr) {
+    console.warn('[authService] LocalStorage sync warning:', storageErr);
+  }
+
+  return payload;
 }
 
 /**
@@ -189,6 +273,9 @@ export function getFriendlyAuthErrorMessage(err) {
   if (msg.includes('user not found')) {
     return 'No account found with this email. Please sign in with OTP first.';
   }
+  if (msg.includes('row-level security') || msg.includes('rls') || msg.includes('policy')) {
+    return 'Permission denied by security policy. Please sign in again.';
+  }
   return err.message || 'Authentication error. Please try again.';
 }
 
@@ -197,6 +284,7 @@ export default {
   verifyEmailOtp,
   updateUserPassword,
   signInWithPassword,
+  upsertProfile,
   signOut,
   getSession,
   getCurrentUser,
