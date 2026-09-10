@@ -527,42 +527,146 @@
         } catch(err) {}
       };
 
-      // STEP 1: Quick Demo Selection
-      const handleSelectDemo = (type) => {
-        setSelectedDemo(type);
-        if (type === 'caregiver') {
-          setFullName('Rahul Sharma');
-          setAge('45');
-          setRole('caregiver');
+      const [authMode, setAuthMode] = useState('otp'); // 'otp' | 'password'
+      const [email, setEmail] = useState('rahul@careloop.health');
+      const [password, setPassword] = useState('');
+      const [otpToken, setOtpToken] = useState('');
+      const [authLoading, setAuthLoading] = useState(false);
+      const [authError, setAuthError] = useState('');
+      const [authSuccessMsg, setAuthSuccessMsg] = useState('');
+
+      // STEP 1: Supabase Email OTP or Password Login
+      const handleSendOtpOrPassword = async (e) => {
+        if (e) e.preventDefault();
+        setAuthError('');
+        setAuthSuccessMsg('');
+
+        if (!email || !email.includes('@')) {
+          setAuthError('Please enter a valid email address.');
+          return;
+        }
+
+        const client = window.CareLoopSupabase || window.supabaseClient;
+        if (!client) {
+          setAuthError('Supabase client unavailable. Using offline demo fallback.');
+          setTimeout(() => handleDemoBypass('patient'), 1000);
+          return;
+        }
+
+        setAuthLoading(true);
+
+        if (authMode === 'password') {
+          if (!password) {
+            setAuthError('Please enter your password.');
+            setAuthLoading(false);
+            return;
+          }
+          try {
+            const { data, error } = await client.auth.signInWithPassword({ email, password });
+            if (error) {
+              setAuthError(error.message || 'Invalid password or user not found.');
+              setAuthLoading(false);
+              return;
+            }
+            if (window.careLoopSound) window.careLoopSound.playSuccess();
+            const user = data.user;
+            const displayName = (user && user.user_metadata && user.user_metadata.full_name) || email.split('@')[0];
+            setFullName(displayName);
+            completeAuth(displayName, 'caregiver');
+          } catch(err) {
+            setAuthError(err.message || 'Authentication error.');
+          } finally {
+            setAuthLoading(false);
+          }
         } else {
-          setFullName('Keshav Sharma');
-          setAge('74');
-          setRole('patient');
+          try {
+            const { data, error } = await client.auth.signInWithOtp({
+              email: email,
+              options: { shouldCreateUser: true }
+            });
+            if (error) {
+              setAuthError(error.message || 'Failed to send OTP. Rate limit may apply.');
+              setAuthLoading(false);
+              return;
+            }
+            if (window.careLoopSound) window.careLoopSound.playPop();
+            setStep(2);
+          } catch(err) {
+            setAuthError(err.message || 'Network error sending OTP.');
+          } finally {
+            setAuthLoading(false);
+          }
         }
       };
 
-      // STEP 2: Auto-filled OTP with 1.5s simulated transition
-      useEffect(() => {
-        let timer;
-        if (step === 2 && isAuthModalOpen) {
-          timer = setTimeout(() => {
-            setStep(3);
-          }, 1500);
-        }
-        return () => {
-          if (timer) clearTimeout(timer);
-        };
-      }, [step, isAuthModalOpen]);
-
-      // STEP 3: Save & Enter App
-      const handleSaveAndEnter = (e) => {
+      // STEP 2: Verify Supabase OTP Token
+      const handleVerifyToken = async (e) => {
         if (e) e.preventDefault();
-        const finalName = fullName.trim() || (selectedDemo === 'caregiver' ? 'Rahul Sharma' : 'Keshav Sharma');
-        const finalAge = age || (selectedDemo === 'caregiver' ? '45' : '74');
-        const finalRole = role || selectedDemo;
-        const initial = finalName.charAt(0).toUpperCase();
+        setAuthError('');
+        if (!otpToken || otpToken.trim().length < 6) {
+          setAuthError('Please enter the 6-digit numeric token.');
+          return;
+        }
 
-        // 1. Update localStorage
+        const client = window.CareLoopSupabase || window.supabaseClient;
+        if (!client) {
+          setAuthError('Supabase client unavailable.');
+          return;
+        }
+
+        setAuthLoading(true);
+        try {
+          const { data, error } = await client.auth.verifyOtp({
+            email: email,
+            token: otpToken.trim(),
+            type: 'email'
+          });
+
+          if (error) {
+            setAuthError(error.message || 'Invalid or expired OTP token.');
+            setAuthLoading(false);
+            return;
+          }
+
+          if (window.careLoopSound) window.careLoopSound.playSuccess();
+          const user = data.user;
+          const displayName = (user && user.user_metadata && user.user_metadata.full_name) || email.split('@')[0];
+          setFullName(displayName);
+          setStep(3);
+        } catch(err) {
+          setAuthError(err.message || 'Failed to verify OTP.');
+        } finally {
+          setAuthLoading(false);
+        }
+      };
+
+      // Resend OTP
+      const handleResendOtp = async () => {
+        const client = window.CareLoopSupabase || window.supabaseClient;
+        if (!client || !email) return;
+        try {
+          await client.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+          setAuthSuccessMsg(`New 6-digit code sent to ${email}`);
+        } catch(err) {
+          setAuthError(err.message || 'Could not resend OTP.');
+        }
+      };
+
+      // DEMO FAST-PASS (Pitch / Offline Safe Fallback)
+      const handleDemoBypass = (persona = 'patient') => {
+        setAuthError('');
+        const name = persona === 'caregiver' ? 'Rahul Sharma' : 'Keshav Sharma';
+        const userAge = persona === 'caregiver' ? '45' : '74';
+        const userRole = persona;
+
+        setFullName(name);
+        setAge(userAge);
+        setRole(userRole);
+        completeAuth(name, userRole, userAge);
+      };
+
+      const completeAuth = (finalName, finalRole, finalAge = age) => {
+        const initial = finalName.charAt(0).toUpperCase();
         localStorage.setItem('careloop_patient_name', finalName);
         localStorage.setItem('careloop_user_role', finalRole);
         localStorage.setItem('careloop_user_profile', JSON.stringify({
@@ -580,22 +684,15 @@
             role: finalRole,
             initials: initial,
             language: appLanguage || 'en'
-          }).catch(function(err) {
-            console.warn('[Supabase] Profile upsert failed (cached locally):', err);
-          });
+          }).catch(() => {});
         }
 
-        // 2. Update local state
         setUserInitial(initial);
         setIsAuthModalOpen(false);
         setStep(1);
 
-        // 3. Update Home Screen greeting and display
-        if (typeof updateClock === 'function') {
-          updateClock();
-        }
+        if (typeof updateClock === 'function') updateClock();
 
-        // 4. Notify parent shell
         try {
           window.parent.postMessage({
             type: 'patientUpdated',
@@ -604,7 +701,6 @@
           }, '*');
         } catch(err) {}
 
-        // 5. Role-based routing: if Caregiver, route to Caregiver Dashboard! If Patient, stay on home screen.
         if (finalRole === 'caregiver') {
           if (window.parent && window.parent !== window) {
             window.parent.postMessage({
@@ -615,6 +711,12 @@
             window.location.href = '../dashboard/09-dashboard-overview.html';
           }
         }
+      };
+
+      // STEP 3: Save & Enter App
+      const handleSaveAndEnter = (e) => {
+        if (e) e.preventDefault();
+        completeAuth(fullName.trim() || 'Keshav Sharma', role, age);
       };
 
       return (
@@ -650,10 +752,10 @@
                     </div>
                     <div>
                       <div className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
-                        MindCare
+                        CareLoop
                         <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
                       </div>
-                      <div className="text-[10px] font-mono font-semibold text-slate-400">DEMO AUTH & LANGUAGE</div>
+                      <div className="text-[10px] font-mono font-semibold text-slate-400">SUPABASE AUTH & LANGUAGE</div>
                     </div>
                   </div>
 
@@ -679,122 +781,210 @@
                   </div>
                 </div>
 
-                {/* STEP 1: DEMO SELECTION */}
-                {step === 1 && (
-                  <div>
-                    <h2 className="text-lg font-extrabold text-slate-800 tracking-tight mb-1">
-                      Select Demo Account
-                    </h2>
-                    <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                      Choose a demo persona to explore the app perspective instantly without credentials.
-                    </p>
-
-                    <div className="flex flex-col gap-2.5 mb-5">
-                      {/* Option 1: Caregiver (Rahul) */}
-                      <button
-                        type="button"
-                        onClick={() => handleSelectDemo('caregiver')}
-                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all text-left cursor-pointer ${
-                          selectedDemo === 'caregiver'
-                            ? 'border-2 border-blue-500 bg-blue-50/70 text-blue-900 shadow-sm'
-                            : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 text-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                            <span className="material-symbols-outlined text-[20px]">supervisor_account</span>
-                          </div>
-                          <div>
-                            <div className="font-bold text-xs text-slate-900">Login as Caregiver (Rahul)</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">Rahul Sharma · Age 45 · Caregiver Access</div>
-                          </div>
-                        </div>
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                          selectedDemo === 'caregiver' ? 'border-blue-500 bg-blue-500' : 'border-slate-300 bg-transparent'
-                        }`}>
-                          {selectedDemo === 'caregiver' && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
-                        </div>
-                      </button>
-
-                      {/* Option 2: Patient (Keshav/Kamala) */}
-                      <button
-                        type="button"
-                        onClick={() => handleSelectDemo('patient')}
-                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all text-left cursor-pointer ${
-                          selectedDemo === 'patient'
-                            ? 'border-2 border-blue-500 bg-blue-50/70 text-blue-900 shadow-sm'
-                            : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 text-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                            <span className="material-symbols-outlined text-[20px]">elderly</span>
-                          </div>
-                          <div>
-                            <div className="font-bold text-xs text-slate-900">Login as Patient (Keshav/Kamala)</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">Keshav Sharma · Age 74 · Patient Companion</div>
-                          </div>
-                        </div>
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                          selectedDemo === 'patient' ? 'border-blue-500 bg-blue-500' : 'border-slate-300 bg-transparent'
-                        }`}>
-                          {selectedDemo === 'patient' && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
-                        </div>
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setStep(2)}
-                      className="w-full py-3.5 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.99]"
-                    >
-                      <span>Next</span>
-                      <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                    </button>
+                {/* Status / Error Banner */}
+                {authError && (
+                  <div className="mb-3.5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-start gap-2">
+                    <span className="material-symbols-outlined text-base text-red-500 shrink-0">error</span>
+                    <div>{authError}</div>
+                  </div>
+                )}
+                {authSuccessMsg && (
+                  <div className="mb-3.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium flex items-start gap-2">
+                    <span className="material-symbols-outlined text-base text-emerald-600 shrink-0">check_circle</span>
+                    <div>{authSuccessMsg}</div>
                   </div>
                 )}
 
-                {/* STEP 2: AUTO-FILLED OTP */}
+                {/* STEP 1: SUPABASE AUTH (OTP or Password) */}
+                {step === 1 && (
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-800 tracking-tight mb-1">
+                      {authMode === 'password' ? 'Password Sign In' : 'Sign In with Email'}
+                    </h2>
+                    <p className="text-xs text-slate-500 mb-3.5 leading-relaxed">
+                      {authMode === 'password'
+                        ? 'Sign in with your registered CareLoop credentials.'
+                        : 'Enter your email to receive an instant 6-digit magic code.'}
+                    </p>
+
+                    {/* Mode Toggle Tabs */}
+                    <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl mb-3.5 border border-slate-200 text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => { setAuthMode('otp'); setAuthError(''); }}
+                        className={`flex-1 py-1.5 rounded-lg transition-all ${
+                          authMode === 'otp' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Email Magic OTP
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setAuthMode('password'); setAuthError(''); }}
+                        className={`flex-1 py-1.5 rounded-lg transition-all ${
+                          authMode === 'password' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Password
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSendOtpOrPassword} className="space-y-3 mb-3.5">
+                      {/* Email input */}
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Email</label>
+                        <div className="relative">
+                          <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            placeholder="user@careloop.health"
+                            className="w-full h-11 px-3.5 pl-9 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all"
+                          />
+                          <span className="material-symbols-outlined text-[17px] text-slate-400 absolute left-3 top-3">mail</span>
+                        </div>
+                      </div>
+
+                      {/* Password input */}
+                      {authMode === 'password' && (
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Password</label>
+                          <div className="relative">
+                            <input
+                              type="password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              required
+                              placeholder="Enter password"
+                              className="w-full h-11 px-3.5 pl-9 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all"
+                            />
+                            <span className="material-symbols-outlined text-[17px] text-slate-400 absolute left-3 top-3">lock</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.99]"
+                      >
+                        {authLoading ? (
+                          <span>Processing...</span>
+                        ) : (
+                          <React.Fragment>
+                            <span>{authMode === 'password' ? 'Sign In with Password' : 'Send 6-Digit OTP'}</span>
+                            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                          </React.Fragment>
+                        )}
+                      </button>
+                    </form>
+
+                    {/* Toggle link */}
+                    <div className="text-center mb-3">
+                      <button
+                        type="button"
+                        onClick={() => { setAuthMode(authMode === 'otp' ? 'password' : 'otp'); setAuthError(''); }}
+                        className="text-xs text-blue-600 hover:underline font-semibold"
+                      >
+                        {authMode === 'otp' ? 'Sign in with password instead' : 'Use Email Magic OTP instead'}
+                      </button>
+                    </div>
+
+                    {/* DEMO FAST-PASS (Pitch / Offline Bypass) */}
+                    <div className="pt-3 border-t border-dashed border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Live Demo Fast-Pass</span>
+                        <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Bypass Auth</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDemoBypass('patient')}
+                          className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-left transition-all"
+                        >
+                          <div className="font-bold text-xs text-slate-800">Patient Demo</div>
+                          <div className="text-[10px] text-slate-500">Keshav (74)</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDemoBypass('caregiver')}
+                          className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-left transition-all"
+                        >
+                          <div className="font-bold text-xs text-slate-800">Caregiver Demo</div>
+                          <div className="text-[10px] text-slate-500">Rahul (45)</div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2: VERIFY REAL 6-DIGIT SUPABASE OTP */}
                 {step === 2 && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <button
                         type="button"
-                        onClick={() => setStep(1)}
+                        onClick={() => { setStep(1); setAuthError(''); }}
                         className="text-blue-600 text-xs flex items-center gap-1 cursor-pointer hover:underline font-semibold"
                       >
                         <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-                        <span>Change persona</span>
+                        <span>Back</span>
                       </button>
                       <span className="font-mono text-[10px] text-slate-400 font-semibold">STEP 2 / 3</span>
                     </div>
 
                     <h2 className="text-lg font-extrabold text-slate-800 tracking-tight mb-1">
-                      Auto-Verifying Code
+                      Enter 6-Digit Code
                     </h2>
-                    <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                      Simulating instant verification for <strong className="text-slate-800">{selectedDemo === 'caregiver' ? 'Rahul (Caregiver)' : 'Keshav (Patient)'}</strong>.
+                    <p className="text-xs text-slate-500 mb-3.5 leading-relaxed">
+                      Verification code sent to <strong className="text-slate-800">{email}</strong>.
                     </p>
 
-                    {/* 6 Large OTP boxes */}
-                    <div className="flex justify-between gap-1.5 max-w-[280px] mx-auto mb-4">
-                      {['1', '2', '3', '4', '5', '6'].map((digit, idx) => (
-                        <div
-                          key={idx}
-                          className="w-10 h-12 rounded-xl bg-blue-50 border-2 border-blue-500 text-blue-600 font-mono text-xl font-bold flex items-center justify-center select-none shadow-xs"
-                        >
-                          {digit}
-                        </div>
-                      ))}
+                    <form onSubmit={handleVerifyToken} className="space-y-3.5 mb-3">
+                      <div>
+                        <input
+                          type="text"
+                          maxLength="6"
+                          inputMode="numeric"
+                          value={otpToken}
+                          onChange={(e) => setOtpToken(e.target.value)}
+                          placeholder="123456"
+                          autoFocus
+                          required
+                          className="w-full h-13 text-center text-2xl font-mono font-bold tracking-[6px] bg-slate-50 border-2 border-blue-500 rounded-xl text-slate-900 outline-none focus:bg-white transition-all shadow-xs"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.99]"
+                      >
+                        {authLoading ? 'Verifying Token...' : 'Verify & Continue'}
+                      </button>
+                    </form>
+
+                    <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                      <span>Didn't get code?</span>
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        className="text-blue-600 hover:underline font-bold"
+                      >
+                        Resend Code
+                      </button>
                     </div>
 
-                    {/* Verification Loading Spinner */}
-                    <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center gap-2.5 mb-2.5">
-                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-xs font-semibold text-blue-600">Verifying automatically...</span>
-                    </div>
-                    <div className="text-center text-[11px] text-slate-400 font-mono">
-                      Auto-advancing in 1.5 seconds...
+                    {/* Delayed fallback link */}
+                    <div className="pt-2.5 border-t border-dashed border-slate-200 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleDemoBypass('patient')}
+                        className="text-xs text-amber-600 hover:underline font-semibold"
+                      >
+                        Email delayed? Tap here for Demo Fast-Pass →
+                      </button>
                     </div>
                   </div>
                 )}

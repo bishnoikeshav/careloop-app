@@ -13,11 +13,20 @@
 
   // ---- Config ---------------------------------------------------------------
   // Prefer an explicit config object set by the host page, otherwise fall back
-  // to well-known defaults (anon key is a *publishable* key, safe to embed).
+  // to environment variables or well-known defaults.
   var cfg = window.CARELOOP_CONFIG || {};
 
-  var SUPABASE_URL  = cfg.SUPABASE_URL  || '';
-  var SUPABASE_KEY  = cfg.SUPABASE_ANON_KEY || '';
+  var SUPABASE_URL =
+    cfg.SUPABASE_URL ||
+    (typeof window !== 'undefined' && window.VITE_SUPABASE_URL) ||
+    (typeof process !== 'undefined' && process.env?.REACT_APP_SUPABASE_URL) ||
+    'https://hdxqoozhrvthnobpjffl.supabase.co';
+
+  var SUPABASE_KEY =
+    cfg.SUPABASE_ANON_KEY ||
+    (typeof window !== 'undefined' && window.VITE_SUPABASE_ANON_KEY) ||
+    (typeof process !== 'undefined' && process.env?.REACT_APP_SUPABASE_ANON_KEY) ||
+    'sb_publishable_wQ_JEWk80D8aVqyZg7Zgtw_LTWDY-Ea';
 
   // ---- Guard: CDN loaded? ---------------------------------------------------
   if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
@@ -36,9 +45,11 @@
   // ---- Create client --------------------------------------------------------
   try {
     window.CareLoopSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    window.supabaseClient = window.CareLoopSupabase;
     console.log('[CareLoop] Supabase client initialised ✓');
   } catch (err) {
     console.error('[CareLoop] Supabase client init failed:', err);
     window.CareLoopSupabase = null;
+    window.supabaseClient = null;
   }
 })();

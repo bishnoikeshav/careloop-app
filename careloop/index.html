@@ -584,10 +584,10 @@
         </div>
         <div>
           <div style="font-weight:700; font-size:14px; display:flex; align-items:center; gap:6px;">
-            MindCare
+            CareLoop
             <span style="width:6px; height:6px; border-radius:50%; background:var(--accent); display:inline-block; animation:pulse 2s infinite;"></span>
           </div>
-          <div style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-secondary);">DEMO PROTOTYPE AUTH</div>
+          <div style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-secondary);">SUPABASE AUTHENTICATION</div>
         </div>
       </div>
 
@@ -611,82 +611,126 @@
     <!-- Container for Steps -->
     <div style="padding:22px 26px;">
 
-      <!-- STEP 1: DEMO SELECTION -->
+      <!-- Error / Status Message Banner -->
+      <div id="auth-status-banner" style="display:none; margin-bottom:14px; padding:12px 14px; border-radius:10px; font-size:12.5px; line-height:1.4;"></div>
+
+      <!-- STEP 1: SUPABASE AUTH (Email OTP / Password + Demo Bypass) -->
       <div id="auth-step-1" style="display:block;">
-        <h2 style="font-size:20px; font-weight:700; margin-bottom:4px; color:var(--text-primary);">Demo Account Login</h2>
-        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px; line-height:1.4;">Select a pre-configured persona to test the prototype without typing an email.</p>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <h2 id="auth-step-1-title" style="font-size:19px; font-weight:700; color:var(--text-primary);">Sign In to CareLoop</h2>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-secondary); background:var(--bg-surface-raised); border:1px solid var(--border-subtle); padding:2px 8px; border-radius:10px;">SUPABASE AUTH</span>
+        </div>
+        <p id="auth-step-1-sub" style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.4;">Enter your email to receive an instant 6-digit magic code, or sign in with your password.</p>
 
-        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
-          <!-- Demo Option 1: Caregiver (Rahul) -->
-          <button type="button" id="demo-card-caregiver" onclick="selectDemoAccount('caregiver')" style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:rgba(74,222,148,0.1); border:2px solid var(--accent); border-radius:12px; cursor:pointer; text-align:left; transition:all 150ms; outline:none;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:40px; height:40px; border-radius:10px; background:rgba(74,222,148,0.18); border:1px solid rgba(74,222,148,0.3); display:flex; align-items:center; justify-content:center; color:var(--accent);">
-                <span class="material-symbols-outlined" style="font-size:22px;">supervisor_account</span>
-              </div>
-              <div>
-                <div style="font-weight:700; font-size:14px; color:var(--text-primary);">Demo: Caregiver (Rahul)</div>
-                <div style="font-size:11.5px; color:var(--text-secondary); margin-top:2px;">Rahul Sharma · Age 45 · Caregiver Access</div>
-              </div>
-            </div>
-            <div id="demo-radio-caregiver" style="width:18px; height:18px; border-radius:50%; border:2px solid var(--accent); background:var(--accent); display:flex; align-items:center; justify-content:center;">
-              <div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>
-            </div>
+        <!-- Mode Toggle Tabs (OTP vs Password) -->
+        <div style="display:flex; gap:6px; background:var(--bg-surface-raised); padding:4px; border-radius:10px; border:1px solid var(--border-subtle); margin-bottom:16px;">
+          <button type="button" id="auth-tab-otp" onclick="switchAuthMode('otp')" style="flex:1; padding:8px 10px; border-radius:8px; border:none; font-size:12px; font-weight:700; cursor:pointer; background:var(--accent); color:#0B0D0C; transition:all 150ms;">
+            Email Magic OTP
           </button>
-
-          <!-- Demo Option 2: Patient (Kamala) -->
-          <button type="button" id="demo-card-patient" onclick="selectDemoAccount('patient')" style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:var(--bg-surface-raised); border:1.5px solid var(--border-subtle); border-radius:12px; cursor:pointer; text-align:left; transition:all 150ms; outline:none;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:40px; height:40px; border-radius:10px; background:rgba(90,169,245,0.12); border:1px solid rgba(90,169,245,0.3); display:flex; align-items:center; justify-content:center; color:#5AA9F5;">
-                <span class="material-symbols-outlined" style="font-size:22px;">elderly</span>
-              </div>
-              <div>
-                <div style="font-weight:700; font-size:14px; color:var(--text-primary);">Demo: Patient (Kamala)</div>
-                <div style="font-size:11.5px; color:var(--text-secondary); margin-top:2px;">Kamala Sharma · Age 74 · Patient Companion</div>
-              </div>
-            </div>
-            <div id="demo-radio-patient" style="width:18px; height:18px; border-radius:50%; border:2px solid var(--border-subtle); background:transparent;"></div>
+          <button type="button" id="auth-tab-password" onclick="switchAuthMode('password')" style="flex:1; padding:8px 10px; border-radius:8px; border:none; font-size:12px; font-weight:600; cursor:pointer; background:transparent; color:var(--text-secondary); transition:all 150ms;">
+            Password Login
           </button>
         </div>
 
-        <button type="button" id="demo-next-btn" onclick="handleDemoStep1Next()" style="width:100%; height:52px; border-radius:12px; background:var(--accent); color:#0B0D0C; font-weight:700; font-size:15px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 150ms;">
-          <span>Next</span>
-          <span class="material-symbols-outlined" style="font-size:18px;">arrow_forward</span>
-        </button>
-      </div>
-
-      <!-- STEP 2: AUTO-FILLED OTP -->
-      <div id="auth-step-2" style="display:none;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-          <button type="button" onclick="goToAuthStep(1)" style="background:none; border:none; color:var(--accent); font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px; padding:0;">
-            <span class="material-symbols-outlined" style="font-size:15px;">arrow_back</span>
-            <span>Change demo account</span>
-          </button>
-          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-tertiary);">STEP 2 / 3</span>
-        </div>
-
-        <h2 style="font-size:20px; font-weight:700; margin-bottom:4px; color:var(--text-primary);">Auto-Verifying Code</h2>
-        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px; line-height:1.4;">
-          Simulating instant OTP verification for <span id="auth-otp-account-label" style="font-weight:600; color:var(--text-primary);">Rahul (Caregiver)</span>.
-        </p>
-
-        <div style="margin-bottom:18px;">
-          <div style="display:flex; justify-content:space-between; gap:6px; max-width:320px; margin:0 auto;">
-            <input type="text" class="auth-otp-box" readonly value="1" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
-            <input type="text" class="auth-otp-box" readonly value="2" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
-            <input type="text" class="auth-otp-box" readonly value="3" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
-            <input type="text" class="auth-otp-box" readonly value="4" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
-            <input type="text" class="auth-otp-box" readonly value="5" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
-            <input type="text" class="auth-otp-box" readonly value="6" style="width:44px; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; background:rgba(74,222,148,0.1); border:1.5px solid var(--accent); border-radius:10px; color:var(--accent); outline:none;"/>
+        <!-- Form: Email Input (Shared) -->
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:5px; font-weight:600;">EMAIL ADDRESS</label>
+          <div style="position:relative;">
+            <input type="email" id="auth-email-input" placeholder="caregiver@family.org" value="rahul@careloop.health" style="width:100%; height:44px; padding:0 12px 0 38px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13.5px; outline:none; font-family:'Inter',sans-serif;"/>
+            <span class="material-symbols-outlined" style="position:absolute; left:10px; top:12px; font-size:18px; color:var(--text-secondary);">mail</span>
           </div>
         </div>
 
-        <!-- Auto-verifying notification badge -->
-        <div style="padding:14px; border-radius:12px; background:rgba(74,222,148,0.08); border:1px solid rgba(74,222,148,0.25); display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px;">
-          <span class="spinner" style="width:18px; height:18px; border-width:2px; border-color:var(--accent); border-top-color:transparent; display:inline-block;"></span>
-          <span style="font-size:13px; font-weight:600; color:var(--accent);">Verifying automatically...</span>
+        <!-- Form: Password Input (Visible only in password mode) -->
+        <div id="auth-password-group" style="display:none; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+            <label style="font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); font-weight:600;">PASSWORD</label>
+            <span style="font-size:11px; color:var(--accent); cursor:pointer;" onclick="switchAuthMode('otp')">Use OTP instead</span>
+          </div>
+          <div style="position:relative;">
+            <input type="password" id="auth-password-input" placeholder="Enter your password" style="width:100%; height:44px; padding:0 12px 0 38px; background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:13.5px; outline:none; font-family:'Inter',sans-serif;"/>
+            <span class="material-symbols-outlined" style="position:absolute; left:10px; top:12px; font-size:18px; color:var(--text-secondary);">lock</span>
+          </div>
         </div>
-        <div style="text-align:center; font-size:11px; color:var(--text-tertiary); font-family:'JetBrains Mono',monospace;">
-          Auto-advancing in 1.5 seconds...
+
+        <!-- Primary Action Button: Send OTP or Sign in with Password -->
+        <button type="button" id="auth-submit-btn" onclick="handleAuthStep1Submit()" style="width:100%; height:48px; border-radius:10px; background:var(--accent); color:#0B0D0C; font-weight:700; font-size:14px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 150ms; margin-bottom:16px;">
+          <span id="auth-submit-btn-text">Send 6-Digit OTP</span>
+          <span class="material-symbols-outlined" style="font-size:18px;">send</span>
+        </button>
+
+        <!-- Or toggle link -->
+        <div style="text-align:center; margin-bottom:14px;">
+          <button type="button" id="auth-toggle-mode-link" onclick="toggleAuthMode()" style="background:none; border:none; color:var(--accent); font-size:12px; cursor:pointer; text-decoration:underline;">
+            Sign in with password instead
+          </button>
+        </div>
+
+        <!-- DEMO FAST-PASS (Pitch / Offline Safe Fallback) -->
+        <div style="border-top:1px dashed var(--border-subtle); padding-top:12px; margin-top:6px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <span style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">LIVE DEMO FAST-PASS</span>
+            <span style="font-size:9.5px; color:#F5B942; background:rgba(245,185,66,0.12); padding:1px 6px; border-radius:4px; font-weight:700;">NO EMAIL WAIT</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <button type="button" onclick="handleDemoBypass('patient')" style="padding:9px 10px; border-radius:8px; border:1px solid var(--border-subtle); background:var(--bg-surface-raised); color:var(--text-primary); cursor:pointer; text-align:left; font-size:11.5px; display:flex; align-items:center; gap:8px; transition:all 120ms;">
+              <span class="material-symbols-outlined" style="font-size:17px; color:var(--accent);">elderly</span>
+              <div>
+                <div style="font-weight:700;">Patient Mode</div>
+                <div style="font-size:9.5px; color:var(--text-secondary);">Keshav (74)</div>
+              </div>
+            </button>
+            <button type="button" onclick="handleDemoBypass('caregiver')" style="padding:9px 10px; border-radius:8px; border:1px solid var(--border-subtle); background:var(--bg-surface-raised); color:var(--text-primary); cursor:pointer; text-align:left; font-size:11.5px; display:flex; align-items:center; gap:8px; transition:all 120ms;">
+              <span class="material-symbols-outlined" style="font-size:17px; color:var(--accent);">supervisor_account</span>
+              <div>
+                <div style="font-weight:700;">Caregiver</div>
+                <div style="font-size:9.5px; color:var(--text-secondary);">Rahul (45)</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: VERIFY REAL 6-DIGIT SUPABASE OTP -->
+      <div id="auth-step-2" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <button type="button" onclick="goToAuthStep(1)" style="background:none; border:none; color:var(--accent); font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px; padding:0;">
+            <span class="material-symbols-outlined" style="font-size:15px;">arrow_back</span>
+            <span>Back to email</span>
+          </button>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-secondary);">STEP 2 / 3</span>
+        </div>
+
+        <h2 style="font-size:19px; font-weight:700; margin-bottom:4px; color:var(--text-primary);">Enter Verification Code</h2>
+        <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.4;">
+          A 6-digit verification code was sent to <strong id="auth-otp-sent-to" style="color:var(--text-primary);">your email</strong>.
+        </p>
+
+        <!-- 6-digit Numeric Token Input -->
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--text-secondary); margin-bottom:6px; font-weight:600; text-align:center;">
+            ENTER 6-DIGIT TOKEN
+          </label>
+          <input type="text" id="auth-token-input" maxlength="6" inputmode="numeric" placeholder="123456" style="width:100%; height:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:700; letter-spacing:8px; background:var(--bg-surface-raised); border:2px solid var(--accent); border-radius:12px; color:var(--text-primary); outline:none;" onkeyup="if (event.key === 'Enter') handleVerifyOtpSubmit()"/>
+        </div>
+
+        <button type="button" id="auth-verify-btn" onclick="handleVerifyOtpSubmit()" style="width:100%; height:48px; border-radius:10px; background:var(--accent); color:#0B0D0C; font-weight:700; font-size:14px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 150ms; margin-bottom:12px;">
+          <span id="auth-verify-btn-text">Verify Token</span>
+          <span class="material-symbols-outlined" style="font-size:18px;">verified_user</span>
+        </button>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; font-size:11.5px; color:var(--text-secondary); margin-bottom:12px;">
+          <span>Didn't receive email?</span>
+          <button type="button" onclick="handleResendOtp()" style="background:none; border:none; color:var(--accent); cursor:pointer; font-weight:600; font-size:11.5px; text-decoration:underline;">
+            Resend Code
+          </button>
+        </div>
+
+        <!-- Fast pass link within OTP step in case email delivery takes time -->
+        <div style="border-top:1px dashed var(--border-subtle); padding-top:10px; text-align:center;">
+          <button type="button" onclick="handleDemoBypass('patient')" style="background:none; border:none; color:#F5B942; font-size:11.5px; cursor:pointer; font-weight:600;">
+            Email delayed? Tap here for Demo Fast-Pass →
+          </button>
         </div>
       </div>
 
@@ -994,63 +1038,293 @@
     }
   }
 
-  // STEP 1: DEMO ACCOUNT SELECTION
-  function selectDemoAccount(role) {
-    selectedDemoRole = role;
-    authSelectedRole = role;
+  let authMode = 'otp'; // 'otp' | 'password'
+  let authPendingEmail = '';
 
-    const cardCaregiver = document.getElementById('demo-card-caregiver');
-    const cardPatient = document.getElementById('demo-card-patient');
-    const radioCaregiver = document.getElementById('demo-radio-caregiver');
-    const radioPatient = document.getElementById('demo-radio-patient');
+  function switchAuthMode(mode) {
+    authMode = mode;
+    clearAuthStatus();
+    const tabOtp = document.getElementById('auth-tab-otp');
+    const tabPass = document.getElementById('auth-tab-password');
+    const passGroup = document.getElementById('auth-password-group');
+    const btnText = document.getElementById('auth-submit-btn-text');
+    const toggleLink = document.getElementById('auth-toggle-mode-link');
+    const title = document.getElementById('auth-step-1-title');
 
-    if (role === 'caregiver') {
-      if (cardCaregiver) {
-        cardCaregiver.style.borderColor = 'var(--accent)';
-        cardCaregiver.style.background = 'rgba(74,222,148,0.1)';
+    if (mode === 'password') {
+      if (tabPass) {
+        tabPass.style.background = 'var(--accent)';
+        tabPass.style.color = '#0B0D0C';
+        tabPass.style.fontWeight = '700';
       }
-      if (cardPatient) {
-        cardPatient.style.borderColor = 'var(--border-subtle)';
-        cardPatient.style.background = 'var(--bg-surface-raised)';
+      if (tabOtp) {
+        tabOtp.style.background = 'transparent';
+        tabOtp.style.color = 'var(--text-secondary)';
+        tabOtp.style.fontWeight = '600';
       }
-      if (radioCaregiver) {
-        radioCaregiver.style.borderColor = 'var(--accent)';
-        radioCaregiver.style.background = 'var(--accent)';
-        radioCaregiver.innerHTML = '<div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>';
+      if (passGroup) passGroup.style.display = 'block';
+      if (btnText) btnText.textContent = 'Sign In with Password';
+      if (toggleLink) toggleLink.textContent = 'Use Email OTP instead';
+      if (title) title.textContent = 'Password Sign In';
+    } else {
+      if (tabOtp) {
+        tabOtp.style.background = 'var(--accent)';
+        tabOtp.style.color = '#0B0D0C';
+        tabOtp.style.fontWeight = '700';
       }
-      if (radioPatient) {
-        radioPatient.style.borderColor = 'var(--border-subtle)';
-        radioPatient.style.background = 'transparent';
-        radioPatient.innerHTML = '';
+      if (tabPass) {
+        tabPass.style.background = 'transparent';
+        tabPass.style.color = 'var(--text-secondary)';
+        tabPass.style.fontWeight = '600';
+      }
+      if (passGroup) passGroup.style.display = 'none';
+      if (btnText) btnText.textContent = 'Send 6-Digit OTP';
+      if (toggleLink) toggleLink.textContent = 'Sign in with password instead';
+      if (title) title.textContent = 'Sign In to CareLoop';
+    }
+  }
+
+  function toggleAuthMode() {
+    switchAuthMode(authMode === 'otp' ? 'password' : 'otp');
+  }
+
+  function showAuthStatus(msg, isError = true) {
+    const banner = document.getElementById('auth-status-banner');
+    if (!banner) return;
+    banner.style.display = 'block';
+    if (isError) {
+      banner.style.background = 'rgba(239,68,68,0.12)';
+      banner.style.border = '1px solid rgba(239,68,68,0.3)';
+      banner.style.color = '#FCA5A5';
+      banner.innerHTML = `<span style="font-weight:700;">⚠️ Error:</span> ${msg}`;
+    } else {
+      banner.style.background = 'rgba(74,222,148,0.12)';
+      banner.style.border = '1px solid rgba(74,222,148,0.3)';
+      banner.style.color = 'var(--accent)';
+      banner.innerHTML = `<span style="font-weight:700;">✓</span> ${msg}`;
+    }
+  }
+
+  function clearAuthStatus() {
+    const banner = document.getElementById('auth-status-banner');
+    if (banner) banner.style.display = 'none';
+  }
+
+  // STEP 1 SUBMIT: Either send OTP or login with password via Supabase
+  async function handleAuthStep1Submit() {
+    clearAuthStatus();
+    const emailInput = document.getElementById('auth-email-input');
+    const email = emailInput ? emailInput.value.trim() : '';
+
+    if (!email || !email.includes('@')) {
+      showAuthStatus('Please enter a valid email address.');
+      return;
+    }
+
+    authPendingEmail = email;
+    const client = window.CareLoopSupabase || window.supabaseClient;
+
+    if (!client) {
+      showAuthStatus('Supabase client not initialized. Using offline demo fallback.');
+      setTimeout(() => handleDemoBypass('caregiver'), 1000);
+      return;
+    }
+
+    if (authMode === 'password') {
+      // 3. OPTIONAL PASSWORD LOGIN
+      const passInput = document.getElementById('auth-password-input');
+      const password = passInput ? passInput.value : '';
+      if (!password) {
+        showAuthStatus('Please enter your password.');
+        return;
+      }
+
+      const submitBtn = document.getElementById('auth-submit-btn');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.style.opacity = '0.7'; }
+      try {
+        const { data, error } = await client.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+        if (error) {
+          showAuthStatus(error.message || 'Invalid password or user not found.');
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+          return;
+        }
+
+        if (window.careLoopSound) window.careLoopSound.playSuccess();
+        const user = data.user;
+        const displayName = (user && user.user_metadata && user.user_metadata.full_name) || email.split('@')[0];
+        completeAuthSuccess(displayName, 'caregiver', email);
+      } catch(err) {
+        showAuthStatus(err.message || 'Authentication error.');
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
       }
     } else {
-      if (cardPatient) {
-        cardPatient.style.borderColor = 'var(--accent)';
-        cardPatient.style.background = 'rgba(74,222,148,0.1)';
-      }
-      if (cardCaregiver) {
-        cardCaregiver.style.borderColor = 'var(--border-subtle)';
-        cardCaregiver.style.background = 'var(--bg-surface-raised)';
-      }
-      if (radioPatient) {
-        radioPatient.style.borderColor = 'var(--accent)';
-        radioPatient.style.background = 'var(--accent)';
-        radioPatient.innerHTML = '<div style="width:6px; height:6px; border-radius:50%; background:#0B0D0C;"></div>';
-      }
-      if (radioCaregiver) {
-        radioCaregiver.style.borderColor = 'var(--border-subtle)';
-        radioCaregiver.style.background = 'transparent';
-        radioCaregiver.innerHTML = '';
+      // 1. EMAIL OTP REQUEST
+      const submitBtn = document.getElementById('auth-submit-btn');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.style.opacity = '0.7'; }
+
+      try {
+        const { data, error } = await client.auth.signInWithOtp({
+          email: email,
+          options: { shouldCreateUser: true }
+        });
+
+        if (error) {
+          showAuthStatus(error.message || 'Failed to send OTP. Rate limit may apply.');
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+          return;
+        }
+
+        if (window.careLoopSound) window.careLoopSound.playPop();
+        const sentToEl = document.getElementById('auth-otp-sent-to');
+        if (sentToEl) sentToEl.textContent = email;
+
+        goToAuthStep(2);
+      } catch (err) {
+        showAuthStatus(err.message || 'Network error sending OTP.');
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
       }
     }
   }
 
-  function handleDemoStep1Next() {
-    if (window.careLoopSound) window.careLoopSound.playPop();
-    goToAuthStep(2);
+  // 2. VERIFY REAL OTP
+  async function handleVerifyOtpSubmit() {
+    clearAuthStatus();
+    const tokenInput = document.getElementById('auth-token-input');
+    const enteredToken = tokenInput ? tokenInput.value.trim() : '';
+
+    if (!enteredToken || enteredToken.length < 6) {
+      showAuthStatus('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    const client = window.CareLoopSupabase || window.supabaseClient;
+    if (!client) {
+      showAuthStatus('Supabase client unavailable.');
+      return;
+    }
+
+    const verifyBtn = document.getElementById('auth-verify-btn');
+    if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.style.opacity = '0.7'; }
+
+    try {
+      const { data, error } = await client.auth.verifyOtp({
+        email: authPendingEmail,
+        token: enteredToken,
+        type: 'email'
+      });
+
+      if (error) {
+        showAuthStatus(error.message || 'Invalid or expired OTP token.');
+        if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.style.opacity = '1'; }
+        return;
+      }
+
+      if (window.careLoopSound) window.careLoopSound.playSuccess();
+      const user = data.user;
+      const displayName = (user && user.user_metadata && user.user_metadata.full_name) || authPendingEmail.split('@')[0];
+
+      // Pre-fill profile name in Step 3
+      const nameInput = document.getElementById('auth-fullname-input');
+      if (nameInput) nameInput.value = displayName;
+
+      goToAuthStep(3);
+    } catch (err) {
+      showAuthStatus(err.message || 'OTP verification failed.');
+    } finally {
+      if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.style.opacity = '1'; }
+    }
+  }
+
+  // Resend OTP
+  async function handleResendOtp() {
+    if (!authPendingEmail) return;
+    const client = window.CareLoopSupabase || window.supabaseClient;
+    if (!client) return;
+    try {
+      await client.auth.signInWithOtp({
+        email: authPendingEmail,
+        options: { shouldCreateUser: true }
+      });
+      showAuthStatus(`New 6-digit code sent to ${authPendingEmail}!`, false);
+    } catch(err) {
+      showAuthStatus(err.message || 'Could not resend OTP.');
+    }
+  }
+
+  // 4. DEMO FAST-PASS BYPASS
+  function handleDemoBypass(role = 'patient') {
+    clearAuthStatus();
+    selectedDemoRole = role;
+    authSelectedRole = role;
+
+    const name = role === 'caregiver' ? 'Rahul Sharma' : 'Keshav Sharma';
+    const age = role === 'caregiver' ? 45 : 74;
+
+    currentUser = {
+      name: name,
+      age: age,
+      role: role,
+      initials: name.charAt(0).toUpperCase()
+    };
+
+    localStorage.setItem('careloop_authenticated', 'true');
+    localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
+    localStorage.setItem('careloop_patient_name', name);
+    localStorage.setItem('careloop_user_role', role);
+
+    if (window.careLoopSound) window.careLoopSound.playSuccess();
+    applyAuthenticatedProfile(currentUser);
+    closeLoginModal();
+    isAuthenticated = true;
+
+    if (role === 'caregiver') {
+      setRole('caregiver');
+      navigate('dashboard', '09-dashboard-overview.html', 'Overview', 'OVERVIEW / 09');
+    } else {
+      setRole('patient');
+      patientNav('01-patient-home.html', '01');
+    }
+  }
+
+  function completeAuthSuccess(name, role, email) {
+    currentUser = {
+      name: name || 'Caregiver',
+      age: 45,
+      role: role || 'caregiver',
+      initials: (name || 'C').charAt(0).toUpperCase(),
+      email: email
+    };
+
+    localStorage.setItem('careloop_authenticated', 'true');
+    localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
+    localStorage.setItem('careloop_patient_name', currentUser.name);
+    localStorage.setItem('careloop_user_role', currentUser.role);
+
+    if (window.CareLoopSync && window.CareLoopSync.upsertProfile) {
+      window.CareLoopSync.upsertProfile({
+        name: currentUser.name,
+        age: currentUser.age,
+        role: currentUser.role,
+        initials: currentUser.initials,
+        language: localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en'
+      }).catch(() => {});
+    }
+
+    applyAuthenticatedProfile(currentUser);
+    closeLoginModal();
+    isAuthenticated = true;
+
+    setRole('patient');
+    patientNav('01-patient-home.html', '01');
   }
 
   function goToAuthStep(step) {
+    clearAuthStatus();
     const s1 = document.getElementById('auth-step-1');
     const s2 = document.getElementById('auth-step-2');
     const s3 = document.getElementById('auth-step-3');
@@ -1065,37 +1339,17 @@
     if (d2) d2.style.background = step >= 2 ? 'var(--accent)' : 'var(--border-subtle)';
     if (d3) d3.style.background = step >= 3 ? 'var(--accent)' : 'var(--border-subtle)';
 
-    if (autoOtpTimer) {
-      clearTimeout(autoOtpTimer);
-      autoOtpTimer = null;
-    }
-
     if (step === 2) {
-      // Step 2: Auto-filled OTP
-      const acctLabel = document.getElementById('auth-otp-account-label');
-      if (acctLabel) {
-        acctLabel.textContent = selectedDemoRole === 'caregiver' ? 'Rahul (Caregiver)' : 'Kamala (Patient)';
+      const tokenInput = document.getElementById('auth-token-input');
+      if (tokenInput) {
+        tokenInput.value = '';
+        setTimeout(() => tokenInput.focus(), 200);
       }
-
-      // Automatically transition to Step 3 after exactly 1.5 seconds with no manual click required
-      autoOtpTimer = setTimeout(() => {
-        if (isLoginModalOpen) {
-          goToAuthStep(3);
-        }
-      }, 1500);
     } else if (step === 3) {
-      // Step 3: Profile Setup Pre-fill based on Step 1 selection
       const nameInput = document.getElementById('auth-fullname-input');
       const ageInput = document.getElementById('auth-age-input');
-
-      if (selectedDemoRole === 'caregiver') {
-        if (nameInput) nameInput.value = 'Rahul';
-        if (ageInput) ageInput.value = '45';
-        selectAuthRole('caregiver');
-      } else {
-        if (nameInput) nameInput.value = 'Kamala';
-        if (ageInput) ageInput.value = '74';
-        selectAuthRole('patient');
+      if (authPendingEmail && (!nameInput || !nameInput.value)) {
+        if (nameInput) nameInput.value = authPendingEmail.split('@')[0];
       }
       validateProfileForm();
     }
