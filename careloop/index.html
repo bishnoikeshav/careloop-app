@@ -721,7 +721,7 @@
 
         <div style="display:flex; align-items:center; justify-content:space-between; font-size:11.5px; color:var(--text-secondary); margin-bottom:12px;">
           <span>Didn't receive email?</span>
-          <button type="button" onclick="handleResendOtp()" style="background:none; border:none; color:var(--accent); cursor:pointer; font-weight:600; font-size:11.5px; text-decoration:underline;">
+          <button type="button" id="auth-resend-btn" onclick="handleResendOtp()" style="background:none; border:none; color:var(--accent); cursor:pointer; font-weight:600; font-size:11.5px; text-decoration:underline;">
             Resend Code
           </button>
         </div>
@@ -1003,10 +1003,96 @@
   };
 
   // ═══════════════════════════════════════
-  //  HACKATHON DEMO AUTHENTICATION (PROTOTYPE MODAL)
+  //  OTP COOLDOWN & FRIENDLY ERROR HELPERS
+  // ═══════════════════════════════════════
+  let otpCooldownSeconds = 0;
+  let otpCooldownTimer = null;
+
+  function startOtpCooldown(seconds) {
+    otpCooldownSeconds = seconds || 60;
+    clearInterval(otpCooldownTimer);
+    updateCooldownUI();
+    otpCooldownTimer = setInterval(() => {
+      otpCooldownSeconds--;
+      updateCooldownUI();
+      if (otpCooldownSeconds <= 0) {
+        clearInterval(otpCooldownTimer);
+        otpCooldownTimer = null;
+        otpCooldownSeconds = 0;
+        updateCooldownUI();
+      }
+    }, 1000);
+  }
+
+  function updateCooldownUI() {
+    // Update Send OTP button on Step 1
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const submitBtnText = document.getElementById('auth-submit-btn-text');
+    if (authMode === 'otp' && submitBtn && submitBtnText) {
+      if (otpCooldownSeconds > 0) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.5';
+        submitBtn.style.cursor = 'not-allowed';
+        submitBtnText.textContent = `Resend code in ${otpCooldownSeconds}s`;
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+        submitBtnText.textContent = 'Send 6-Digit OTP';
+      }
+    }
+    // Update Resend button on Step 2
+    const resendBtn = document.getElementById('auth-resend-btn');
+    if (resendBtn) {
+      if (otpCooldownSeconds > 0) {
+        resendBtn.disabled = true;
+        resendBtn.style.opacity = '0.5';
+        resendBtn.style.cursor = 'not-allowed';
+        resendBtn.textContent = `Resend in ${otpCooldownSeconds}s`;
+      } else {
+        resendBtn.disabled = false;
+        resendBtn.style.opacity = '1';
+        resendBtn.style.cursor = 'pointer';
+        resendBtn.textContent = 'Resend Code';
+      }
+    }
+  }
+
+  /**
+   * Map raw Supabase/network errors to user-friendly messages.
+   */
+  function friendlyAuthError(err) {
+    if (!err) return 'Something went wrong. Please try again.';
+    const msg = (typeof err === 'string' ? err : (err.message || err.msg || '')).toLowerCase();
+    const status = err.status || err.statusCode || 0;
+
+    if (status === 429 || msg.includes('rate limit') || msg.includes('too many requests') || msg.includes('rate_limit'))
+      return 'Please wait before requesting another code.';
+    if (msg.includes('token has expired') || msg.includes('otp has expired') || msg.includes('expired'))
+      return 'This code has expired. Please request a new code.';
+    if (msg.includes('invalid') || msg.includes('incorrect') || msg.includes('otp_disabled'))
+      return 'That code is incorrect. Please check your email and try again.';
+    if (msg.includes('email not confirmed'))
+      return 'Please check your email and enter the verification code.';
+    if (msg.includes('user not found') || msg.includes('no user'))
+      return 'No account found with this email. Please check and try again.';
+    if (msg.includes('invalid login credentials') || msg.includes('wrong password'))
+      return 'Invalid email or password. Please try again.';
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch') || msg.includes('load failed'))
+      return 'Please check your internet connection and try again.';
+    if (msg.includes('unable to validate') || msg.includes('captcha'))
+      return 'Verification failed. Please try again.';
+    if (msg.includes('email'))
+      return "We couldn't send the verification code. Please try again later.";
+    // Fallback
+    return 'Something went wrong. Please try again.';
+  }
+
+  // ═══════════════════════════════════════
+  //  AUTHENTICATION (SUPABASE OTP + PASSWORD + DEMO BYPASS)
   // ═══════════════════════════════════════
   let isAppLoading = true;
-  let isAuthenticated = true; // Default to active authenticated session for hackathon demo
+  let isAuthenticated = false; // Will be set by session check
   let isLoginModalOpen = false;
   let selectedDemoRole = 'patient'; // 'caregiver' | 'patient'
   let authSelectedRole = 'patient';
@@ -1141,7 +1227,7 @@
     }
 
     if (authMode === 'password') {
-      // 3. OPTIONAL PASSWORD LOGIN
+      // PASSWORD LOGIN
       const passInput = document.getElementById('auth-password-input');
       const password = passInput ? passInput.value : '';
       if (!password) {
@@ -1157,28 +1243,31 @@
           password: password
         });
         if (error) {
-          showAuthStatus(error.message || 'Invalid password or user not found.');
+          showAuthStatus(friendlyAuthError(error));
           if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
           return;
         }
 
-        try {
-          window.careLoopSound?.playSuccess?.();
-        } catch (err) {
-          console.warn("Audio playback skipped:", err);
-        }
+        try { window.careLoopSound?.playSuccess?.(); } catch (_) {}
         const user = data.user;
         const displayName = (user && user.user_metadata && user.user_metadata.full_name) || email.split('@')[0];
         completeAuthSuccess(displayName, 'caregiver', email);
       } catch(err) {
-        showAuthStatus(err.message || 'Authentication error.');
+        showAuthStatus(friendlyAuthError(err));
       } finally {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
       }
     } else {
-      // 1. EMAIL OTP REQUEST
+      // EMAIL OTP REQUEST — check cooldown first
+      if (otpCooldownSeconds > 0) {
+        showAuthStatus(`Please wait ${otpCooldownSeconds} seconds before requesting another code.`);
+        return;
+      }
+
       const submitBtn = document.getElementById('auth-submit-btn');
+      const submitBtnText = document.getElementById('auth-submit-btn-text');
       if (submitBtn) { submitBtn.disabled = true; submitBtn.style.opacity = '0.7'; }
+      if (submitBtnText) submitBtnText.textContent = 'Sending...';
 
       try {
         const { data, error } = await client.auth.signInWithOtp({
@@ -1187,24 +1276,27 @@
         });
 
         if (error) {
-          showAuthStatus(error.message || 'Failed to send OTP. Rate limit may apply.');
+          showAuthStatus(friendlyAuthError(error));
           if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+          if (submitBtnText) submitBtnText.textContent = 'Send 6-Digit OTP';
           return;
         }
 
-        try {
-          window.careLoopSound?.playPop?.();
-        } catch (err) {
-          console.warn("Audio playback skipped:", err);
-        }
+        try { window.careLoopSound?.playPop?.(); } catch (_) {}
         const sentToEl = document.getElementById('auth-otp-sent-to');
         if (sentToEl) sentToEl.textContent = email;
 
+        // Start 60-second cooldown to prevent rapid re-requests
+        startOtpCooldown(60);
         goToAuthStep(2);
       } catch (err) {
-        showAuthStatus(err.message || 'Network error sending OTP.');
+        showAuthStatus(friendlyAuthError(err));
+        if (submitBtnText) submitBtnText.textContent = 'Send 6-Digit OTP';
       } finally {
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+        if (submitBtn && otpCooldownSeconds <= 0) {
+          submitBtn.disabled = false;
+          submitBtn.style.opacity = '1';
+        }
       }
     }
   }
@@ -1227,7 +1319,9 @@
     }
 
     const verifyBtn = document.getElementById('auth-verify-btn');
+    const verifyBtnText = document.getElementById('auth-verify-btn-text');
     if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.style.opacity = '0.7'; }
+    if (verifyBtnText) verifyBtnText.textContent = 'Verifying...';
 
     try {
       const { data, error } = await client.auth.verifyOtp({
@@ -1237,18 +1331,20 @@
       });
 
       if (error) {
-        showAuthStatus(error.message || 'Invalid or expired OTP token.');
+        showAuthStatus(friendlyAuthError(error));
         if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.style.opacity = '1'; }
+        if (verifyBtnText) verifyBtnText.textContent = 'Verify Token';
         return;
       }
 
-      try {
-        window.careLoopSound?.playSuccess?.();
-      } catch (err) {
-        console.warn("Audio playback skipped:", err);
-      }
+      try { window.careLoopSound?.playSuccess?.(); } catch (_) {}
       const user = data.user;
       const displayName = (user && user.user_metadata && user.user_metadata.full_name) || authPendingEmail.split('@')[0];
+
+      // Clear cooldown on successful verification
+      otpCooldownSeconds = 0;
+      clearInterval(otpCooldownTimer);
+      otpCooldownTimer = null;
 
       // Pre-fill profile name in Step 3
       const nameInput = document.getElementById('auth-fullname-input');
@@ -1256,25 +1352,45 @@
 
       goToAuthStep(3);
     } catch (err) {
-      showAuthStatus(err.message || 'OTP verification failed.');
+      showAuthStatus(friendlyAuthError(err));
     } finally {
       if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.style.opacity = '1'; }
+      if (verifyBtnText) verifyBtnText.textContent = 'Verify Token';
     }
   }
 
-  // Resend OTP
+  // Resend OTP (with cooldown enforcement)
   async function handleResendOtp() {
     if (!authPendingEmail) return;
     const client = window.CareLoopSupabase || window.supabaseClient;
     if (!client) return;
+
+    // Enforce cooldown
+    if (otpCooldownSeconds > 0) {
+      showAuthStatus(`Please wait ${otpCooldownSeconds} seconds before requesting another code.`);
+      return;
+    }
+
+    const resendBtn = document.getElementById('auth-resend-btn');
+    if (resendBtn) { resendBtn.disabled = true; resendBtn.textContent = 'Sending...'; }
+
     try {
-      await client.auth.signInWithOtp({
+      const { error } = await client.auth.signInWithOtp({
         email: authPendingEmail,
         options: { shouldCreateUser: true }
       });
+
+      if (error) {
+        showAuthStatus(friendlyAuthError(error));
+        if (resendBtn) { resendBtn.disabled = false; resendBtn.textContent = 'Resend Code'; }
+        return;
+      }
+
       showAuthStatus(`New 6-digit code sent to ${authPendingEmail}!`, false);
+      startOtpCooldown(60);
     } catch(err) {
-      showAuthStatus(err.message || 'Could not resend OTP.');
+      showAuthStatus(friendlyAuthError(err));
+      if (resendBtn) { resendBtn.disabled = false; resendBtn.textContent = 'Resend Code'; }
     }
   }
 
@@ -1525,10 +1641,19 @@
     }
   }
 
-  function signOutAuth() {
+  async function signOutAuth() {
+    // Sign out from Supabase (clears server session + local token)
+    try {
+      const client = window.CareLoopSupabase || window.supabaseClient;
+      if (client) await client.auth.signOut();
+    } catch (_) {}
+
     localStorage.removeItem('careloop_authenticated');
     localStorage.removeItem('careloop_user_profile');
+    localStorage.removeItem('careloop_user_role');
+    localStorage.removeItem('careloop_patient_name');
     currentUser = null;
+    isAuthenticated = false;
 
     const iconEl = document.getElementById('top-profile-icon');
     const initialsEl = document.getElementById('top-profile-initials');
@@ -1537,7 +1662,7 @@
     if (iconEl) iconEl.style.display = 'inline-block';
     if (initialsEl) initialsEl.style.display = 'none';
     if (dotEl) dotEl.style.display = 'none';
-    if (btn) btn.title = 'Demo Profile / Switch Account';
+    if (btn) btn.title = 'Sign In / Switch Account';
 
     openLoginModal();
   }
@@ -1566,11 +1691,107 @@
     updatePhoneClock();
     setInterval(updatePhoneClock, 1000);
 
-    // Requirement 3 & 4: Always default to Patient View (Home Screen)
+    // ── Supabase Session Persistence ──────────────────────────────────
+    const client = window.CareLoopSupabase || window.supabaseClient;
+    if (client) {
+      // Check for existing session on page load
+      client.auth.getSession().then(({ data: { session } }) => {
+        if (session && session.user) {
+          const user = session.user;
+          const savedProfile = JSON.parse(localStorage.getItem('careloop_user_profile') || 'null');
+          const displayName = (user.user_metadata && user.user_metadata.full_name)
+            || (savedProfile && savedProfile.name)
+            || user.email.split('@')[0];
+          const role = (savedProfile && savedProfile.role) || localStorage.getItem('careloop_user_role') || 'patient';
+          const age = (savedProfile && savedProfile.age) || 45;
+
+          currentUser = {
+            name: displayName,
+            age: age,
+            role: role,
+            initials: displayName.charAt(0).toUpperCase(),
+            email: user.email
+          };
+          isAuthenticated = true;
+          localStorage.setItem('careloop_authenticated', 'true');
+          localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
+          applyAuthenticatedProfile(currentUser);
+          console.log('[CareLoop] Restored Supabase session for', user.email);
+        } else {
+          // No active Supabase session — check localStorage demo fallback
+          const localAuth = localStorage.getItem('careloop_authenticated');
+          if (localAuth === 'true') {
+            const savedProfile = JSON.parse(localStorage.getItem('careloop_user_profile') || 'null');
+            if (savedProfile) {
+              currentUser = savedProfile;
+              isAuthenticated = true;
+              applyAuthenticatedProfile(savedProfile);
+            }
+          }
+        }
+      }).catch(() => {
+        // Network error — fall back to localStorage
+        const localAuth = localStorage.getItem('careloop_authenticated');
+        if (localAuth === 'true') {
+          const savedProfile = JSON.parse(localStorage.getItem('careloop_user_profile') || 'null');
+          if (savedProfile) {
+            currentUser = savedProfile;
+            isAuthenticated = true;
+            applyAuthenticatedProfile(savedProfile);
+          }
+        }
+      });
+
+      // Listen for auth state changes (login/logout from other tabs, token refresh)
+      client.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session && session.user) {
+          const user = session.user;
+          const displayName = (user.user_metadata && user.user_metadata.full_name) || user.email.split('@')[0];
+          if (!isAuthenticated) {
+            currentUser = {
+              name: displayName,
+              age: 45,
+              role: localStorage.getItem('careloop_user_role') || 'patient',
+              initials: displayName.charAt(0).toUpperCase(),
+              email: user.email
+            };
+            isAuthenticated = true;
+            localStorage.setItem('careloop_authenticated', 'true');
+            localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
+            applyAuthenticatedProfile(currentUser);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          isAuthenticated = false;
+          currentUser = null;
+          localStorage.removeItem('careloop_authenticated');
+          localStorage.removeItem('careloop_user_profile');
+          // Reset profile UI
+          const iconEl = document.getElementById('top-profile-icon');
+          const initialsEl = document.getElementById('top-profile-initials');
+          const dotEl = document.getElementById('top-profile-dot');
+          if (iconEl) iconEl.style.display = 'inline-block';
+          if (initialsEl) initialsEl.style.display = 'none';
+          if (dotEl) dotEl.style.display = 'none';
+        }
+      });
+    } else {
+      // No Supabase client — check localStorage demo fallback
+      const localAuth = localStorage.getItem('careloop_authenticated');
+      if (localAuth === 'true') {
+        const savedProfile = JSON.parse(localStorage.getItem('careloop_user_profile') || 'null');
+        if (savedProfile) {
+          currentUser = savedProfile;
+          isAuthenticated = true;
+          applyAuthenticatedProfile(savedProfile);
+        }
+      }
+    }
+
+    // Default to Patient View (Home Screen)
     setRole('patient');
     patientNav('01-patient-home.html', '01');
 
-    // 1. Initial splash screen timer: exactly 2 seconds
+    // Initial splash screen timer: exactly 2 seconds
     setTimeout(() => {
       isAppLoading = false;
       const splash = document.getElementById('splash-screen');
@@ -1579,7 +1800,6 @@
         splash.style.pointerEvents = 'none';
         setTimeout(() => splash.remove(), 350);
       }
-      // App loads directly into Patient View (Home Screen) with active default session
     }, 2000);
   });
 
