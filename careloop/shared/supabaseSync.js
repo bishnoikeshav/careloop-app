@@ -50,25 +50,58 @@
     var id = profile.id || getProfileId();
     localStorage.setItem('careloop_profile_id', id);
 
+    var parsedAge = profile.age && !isNaN(profile.age) ? parseInt(profile.age, 10) : null;
     var row = {
       id:         id,
       name:       profile.name  || '',
-      age:        parseInt(profile.age, 10) || 0,
+      full_name:  profile.name  || profile.full_name || '',
+      age:        parsedAge,
       role:       profile.role  || 'patient',
-      initials:   profile.initials || (profile.name || '?').charAt(0).toUpperCase(),
-      language:   profile.language || localStorage.getItem('careloop_lang') || 'en',
-      updated_at: new Date().toISOString()
+      preferred_language: profile.language || profile.preferred_language || localStorage.getItem('careloop_lang') || 'English'
     };
 
     // --- localStorage (always) ---
-    localStorage.setItem('careloop_user_profile', JSON.stringify(row));
+    localStorage.setItem('careloop_user_profile', JSON.stringify({
+      ...row,
+      initials: profile.initials || (profile.name || '?').charAt(0).toUpperCase()
+    }));
     localStorage.setItem('careloop_patient_name', row.name);
     localStorage.setItem('careloop_user_role', row.role);
 
     // --- Supabase ---
-    if (!sb()) return row;
-    var res = await sb().from('profiles').upsert(row, { onConflict: 'id' });
-    if (res.error) console.warn('[Supabase] upsertProfile error:', res.error.message);
+    var client = sb();
+    if (!client) return row;
+
+    try {
+      // Validate that we have an authenticated user with a valid UUID
+      var { data: authData } = await client.auth.getUser();
+      var user = authData ? authData.user : null;
+      var validUuid = (user && user.id) || (id && !id.startsWith('local_') && !id.startsWith('user_') ? id : null);
+      if (!validUuid) {
+        // Not authenticated with a UUID; keep offline in localStorage without throwing
+        return row;
+      }
+
+      var dbPayload = {
+        id: validUuid,
+        full_name: row.full_name,
+        name: row.name,
+        age: row.age,
+        role: row.role || 'caregiver',
+        preferred_language: row.preferred_language,
+        phone: profile.phone || '',
+        relationship: profile.relationship || '',
+        notes: profile.notes || ''
+      };
+
+      var res = await client.from('profiles').upsert(dbPayload, { onConflict: 'id' });
+      if (res.error) {
+        console.warn('[Supabase] upsertProfile error:', `${res.error.message} (${res.error.code || '400'})`);
+      }
+    } catch (syncErr) {
+      console.warn('[Supabase] upsertProfile exception:', syncErr);
+    }
+
     return row;
   }
 

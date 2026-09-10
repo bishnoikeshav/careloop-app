@@ -1642,8 +1642,9 @@
     const cPhoneInput = document.getElementById('auth-caregiver-phone');
 
     const patientName = pNameInput ? pNameInput.value.trim() : '';
-    const patientAge = pAgeInput ? parseInt(pAgeInput.value, 10) : 0;
-    const preferredLanguage = pLangInput ? pLangInput.value : 'en';
+    const rawAge = pAgeInput ? pAgeInput.value.trim() : '';
+    const patientAge = rawAge && !isNaN(rawAge) ? parseInt(rawAge, 10) : null;
+    const preferredLanguage = pLangInput ? pLangInput.value : 'English';
     const cognitiveNotes = pNotesInput ? pNotesInput.value.trim() : '';
 
     const caregiverName = cNameInput ? cNameInput.value.trim() : '';
@@ -1654,7 +1655,7 @@
       showAuthStatus("Please enter the patient's full name.");
       return;
     }
-    if (!patientAge || patientAge < 1 || patientAge > 125) {
+    if (patientAge === null || patientAge < 1 || patientAge > 125) {
       showAuthStatus("Please enter a valid patient age between 1 and 125.");
       return;
     }
@@ -1673,53 +1674,58 @@
     if (btnText) btnText.textContent = 'Saving Profile...';
 
     const client = window.CareLoopSupabase || window.supabaseClient;
-    let userId = null;
-    try {
-      if (client) {
-        const { data: { user } } = await client.auth.getUser();
-        userId = user ? user.id : null;
-      }
-    } catch (_) {}
-
-    if (!userId) {
-      userId = localStorage.getItem('careloop_profile_id') || ('user_' + Date.now());
-      localStorage.setItem('careloop_profile_id', userId);
+    if (!client) {
+      showAuthStatus("Supabase client unavailable.");
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      if (btnText) btnText.textContent = 'Save Profile & Enter App';
+      return;
     }
 
-    const profilePayload = {
-      id: userId,
-      full_name: patientName,
-      name: patientName,
-      age: patientAge,
-      role: 'caregiver',
-      preferred_language: preferredLanguage,
-      phone: caregiverPhone,
-      relationship: caregiverRelationship,
-      notes: cognitiveNotes
-    };
-
     try {
-      if (client) {
-        const { error: upsertErr } = await client.from('profiles').upsert(profilePayload, { onConflict: 'id' });
-        if (upsertErr) {
-          throw upsertErr;
-        }
-
-        try {
-          await client.auth.updateUser({
-            data: {
-              patient_name: patientName,
-              patient_age: patientAge,
-              preferred_language: preferredLanguage,
-              cognitive_notes: cognitiveNotes,
-              caregiver_name: caregiverName,
-              caregiver_relationship: caregiverRelationship,
-              caregiver_phone: caregiverPhone,
-              full_name: caregiverName || patientName
-            }
-          });
-        } catch (_) {}
+      // 1. Ensure user ID is valid from active authenticated session
+      const { data: authData, error: userError } = await client.auth.getUser();
+      const user = authData ? authData.user : null;
+      if (!user || !user.id) {
+        throw new Error("No active authenticated user session found");
       }
+
+      // 2. Sanitize payload before upserting (NEVER send empty string "" for age)
+      const profilePayload = {
+        id: user.id,
+        full_name: patientName,
+        name: patientName,
+        age: patientAge,
+        role: 'caregiver',
+        preferred_language: preferredLanguage,
+        phone: caregiverPhone,
+        relationship: caregiverRelationship,
+        notes: cognitiveNotes
+      };
+
+      const { data, error: upsertErr } = await client
+        .from('profiles')
+        .upsert(profilePayload, { onConflict: 'id' });
+
+      if (upsertErr) {
+        const errorMsg = `${upsertErr.message} (${upsertErr.code || '400'})`;
+        showAuthStatus(errorMsg);
+        throw upsertErr;
+      }
+
+      try {
+        await client.auth.updateUser({
+          data: {
+            patient_name: patientName,
+            patient_age: patientAge,
+            preferred_language: preferredLanguage,
+            cognitive_notes: cognitiveNotes,
+            caregiver_name: caregiverName,
+            caregiver_relationship: caregiverRelationship,
+            caregiver_phone: caregiverPhone,
+            full_name: caregiverName || patientName
+          }
+        });
+      } catch (_) {}
 
       currentUser = {
         name: patientName,
@@ -1759,7 +1765,8 @@
       patientNav('01-patient-home.html', '01');
     } catch (err) {
       console.error('[CareLoop] Profile upsert error:', err);
-      showAuthStatus(err.message || 'Could not save profile to Supabase. Please try again.');
+      const errorMsg = `${err.message || 'Could not save profile to Supabase. Please try again.'} (${err.code || '400'})`;
+      showAuthStatus(errorMsg);
     } finally {
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
       if (btnText) btnText.textContent = 'Save Profile & Enter App';

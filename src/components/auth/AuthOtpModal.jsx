@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../../supabaseClient.js';
 import {
   sendEmailOtp,
   verifyEmailOtp,
@@ -281,77 +282,108 @@ export function AuthOtpModal({
     setSuccessMsg('');
 
     // Input validation with visual raw error banner feedback
-    if (!patientName.trim()) {
+    if (!patientName || !patientName.trim()) {
       setRawError("Please enter the patient's full name.");
       playSound('error');
       return;
     }
 
-    const parsedAge = age ? parseInt(age, 10) : null;
-    if (!parsedAge || parsedAge < 1 || parsedAge > 125) {
+    const parsedAge = age && !isNaN(age) ? parseInt(age, 10) : null;
+    if (parsedAge === null || parsedAge < 1 || parsedAge > 125) {
       setRawError('Please enter a valid age between 1 and 125.');
       playSound('error');
       return;
     }
 
-    if (!caregiverName.trim()) {
+    if (!caregiverName || !caregiverName.trim()) {
       setRawError("Please enter the caregiver's full name.");
       playSound('error');
       return;
     }
 
-    if (!caregiverPhone.trim()) {
+    if (!caregiverPhone || !caregiverPhone.trim()) {
       setRawError('Please enter an emergency contact phone number.');
-      playSound('error');
-      return;
-    }
-
-    // Resolve user ID from state or Supabase session
-    let userId = authenticatedUser?.id;
-    if (!userId) {
-      try {
-        const u = await getCurrentUser();
-        userId = u?.id;
-      } catch (_) {}
-    }
-
-    if (!userId) {
-      setRawError('User session ID not found. Please restart authentication.');
       playSound('error');
       return;
     }
 
     setLoading(true);
     try {
-      // Calls saveCareProfile with safe database column mappings
-      await saveCareProfile(userId, {
-        patientName: patientName.trim(),
+      // 1. Ensure the user ID is valid from active authenticated session
+      const user = (await supabase.auth.getUser())?.data?.user;
+      if (!user?.id) {
+        throw new Error("No active authenticated user session found");
+      }
+
+      // 2. Sanitize payload before upserting (NEVER send empty string "" for age)
+      const profilePayload = {
+        id: user.id,
+        full_name: patientName.trim(),
+        name: patientName.trim(),
         age: parsedAge,
-        language: language || 'English',
-        notes: notes.trim(),
-        caregiverName: caregiverName.trim(),
+        role: 'caregiver',
+        preferred_language: language || 'English',
+        phone: caregiverPhone.trim(),
         relationship: relationship || 'Daughter',
-        caregiverPhone: caregiverPhone.trim()
-      });
+        notes: notes.trim()
+      };
+
+      // 3. Upsert matching database columns safely
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(profilePayload, { onConflict: 'id' });
+
+      if (error) {
+        setRawError(`${error.message} (${error.code || '400'})`);
+        throw error;
+      }
+
+      // Persist to user metadata for session synchronization
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            full_name: profilePayload.full_name,
+            patient_name: profilePayload.full_name,
+            age: profilePayload.age,
+            preferred_language: profilePayload.preferred_language,
+            caregiver_name: caregiverName.trim(),
+            relationship: profilePayload.relationship,
+            phone: profilePayload.phone,
+            notes: profilePayload.notes
+          }
+        });
+      } catch (metaErr) {
+        console.warn('[AuthOtpModal] Metadata update notice:', metaErr.message);
+      }
+
+      // Mirror to localStorage for offline resilience
+      try {
+        localStorage.setItem('careloop_user_profile', JSON.stringify({
+          ...profilePayload,
+          caregiver_name: caregiverName.trim()
+        }));
+        localStorage.setItem('careloop_patient_name', profilePayload.full_name || 'Patient');
+        localStorage.setItem('careloop_app_language', profilePayload.preferred_language);
+        localStorage.setItem('careloop_authenticated', 'true');
+      } catch (_) {}
 
       playSound('success');
 
-      // Immediately call onAuthSuccess and onClose
+      // 4. On success call onAuthSuccess() and close modal
       const session = await getSession();
-      const user = (await getCurrentUser()) || authenticatedUser;
-
       if (onAuthSuccess) {
         onAuthSuccess({
           session,
           user,
+          data,
           profile: {
-            patientName,
+            patientName: patientName.trim(),
             age: parsedAge,
             language,
-            notes,
-            caregiverName,
+            notes: notes.trim(),
+            caregiverName: caregiverName.trim(),
             relationship,
-            caregiverPhone
+            caregiverPhone: caregiverPhone.trim()
           }
         });
       }
@@ -360,9 +392,9 @@ export function AuthOtpModal({
         onClose();
       }
     } catch (err) {
-      // Surface raw error string visually in a visible red banner instead of freezing
+      // Surface raw error string visually in red banner instead of freezing
       console.error('[AuthOtpModal] handleSave error:', err);
-      setRawError(err.message || String(err));
+      setRawError(`${err.message} (${err.code || '400'})`);
       playSound('error');
     } finally {
       // Re-enable button so it is never permanently unclickable

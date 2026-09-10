@@ -105,30 +105,41 @@ export async function signInWithPassword(email, password) {
  * @returns {Promise<boolean>}
  */
 export async function saveCareProfile(userId, data = {}) {
-  if (!userId) {
-    throw new Error('User ID is required to save care profile.');
+  let validUserId = userId;
+  if (!validUserId) {
+    const user = (await supabase.auth.getUser())?.data?.user;
+    if (!user?.id) {
+      throw new Error("No active authenticated user session found");
+    }
+    validUserId = user.id;
   }
 
+  const parsedAge = data.age && !isNaN(data.age) ? parseInt(data.age, 10) : null;
+  const fullName = (data.patientName || data.fullName || data.name || '').trim();
+
   const profilePayload = {
-    id: userId,
-    full_name: data.patientName || data.fullName || '',
-    name: data.patientName || data.fullName || '',
-    age: data.age ? parseInt(data.age, 10) : null,
+    id: validUserId,
+    full_name: fullName,
+    name: fullName,
+    age: parsedAge,
     role: data.role || 'caregiver',
-    preferred_language: data.language || 'English',
-    phone: data.caregiverPhone || data.phone || '',
-    relationship: data.relationship || '',
-    notes: data.notes || ''
+    preferred_language: data.language || data.preferred_language || 'English',
+    phone: (data.caregiverPhone || data.phone || '').trim(),
+    relationship: (data.relationship || '').trim(),
+    notes: (data.notes || '').trim()
   };
 
   // Upsert matching database columns safely
-  const { error } = await supabase
+  const { data: resultData, error } = await supabase
     .from('profiles')
     .upsert(profilePayload, { onConflict: 'id' });
 
   if (error) {
     console.error('[saveCareProfile] Supabase upsert error:', error);
-    throw error;
+    const err = new Error(`${error.message} (${error.code || '400'})`);
+    err.code = error.code;
+    err.details = error.details;
+    throw err;
   }
 
   // Also persist to Supabase Auth metadata for immediate session availability
