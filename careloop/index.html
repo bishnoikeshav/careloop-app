@@ -877,6 +877,16 @@
 <script src="shared/sound.js"></script>
 <script src="shared/translations.js"></script>
 <script src="shared/api.js"></script>
+<!-- Supabase Integration -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  window.CARELOOP_CONFIG = {
+    SUPABASE_URL: 'https://hdxqoozhrvthnobpjffl.supabase.co',
+    SUPABASE_ANON_KEY: 'sb_publishable_wQ_JEWk80D8aVqyZg7Zgtw_LTWDY-Ea'
+  };
+</script>
+<script src="shared/supabaseClient.js"></script>
+<script src="shared/supabaseSync.js"></script>
 
 <script>
   // ═══════════════════════════════════════
@@ -1176,6 +1186,18 @@
     localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
     localStorage.setItem('careloop_patient_name', name);
     localStorage.setItem('careloop_user_role', role);
+
+    if (window.CareLoopSync && window.CareLoopSync.upsertProfile) {
+      window.CareLoopSync.upsertProfile({
+        name: name,
+        age: age,
+        role: role,
+        initials: initial,
+        language: localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en'
+      }).catch(function(err) {
+        console.warn('[Supabase] Profile upsert failed (cached locally):', err);
+      });
+    }
 
     if (window.careLoopSound) window.careLoopSound.playSuccess();
     applyAuthenticatedProfile(currentUser);

@@ -11,6 +11,16 @@
   <script src="../shared/sound.js"></script>
   <script src="../shared/translations.js"></script>
   <script src="../shared/api.js"></script>
+  <!-- Supabase Integration -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    window.CARELOOP_CONFIG = {
+      SUPABASE_URL: 'https://hdxqoozhrvthnobpjffl.supabase.co',
+      SUPABASE_ANON_KEY: 'sb_publishable_wQ_JEWk80D8aVqyZg7Zgtw_LTWDY-Ea'
+    };
+  </script>
+  <script src="../shared/supabaseClient.js"></script>
+  <script src="../shared/supabaseSync.js"></script>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
@@ -429,7 +439,7 @@
       }
     });
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       renderContacts();
       const urlParams = new URLSearchParams(window.location.search);
       const callContactId = urlParams.get('call');
@@ -440,6 +450,25 @@
       }
       const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
       applyLanguage(activeLang);
+
+      // Async sync from Supabase if available
+      if (window.CareLoopSync && window.CareLoopSync.fetchContacts) {
+        try {
+          const cloudContacts = await window.CareLoopSync.fetchContacts();
+          if (cloudContacts && cloudContacts.length > 0) {
+            CONTACTS.length = 0;
+            cloudContacts.forEach(c => CONTACTS.push(c));
+            renderContacts();
+          } else {
+            // Seed defaults to cloud for this profile
+            CONTACTS.forEach(c => {
+              window.CareLoopSync.upsertContact(c).catch(() => {});
+            });
+          }
+        } catch(err) {
+          console.warn('[Supabase] Initial contacts fetch failed (using local):', err);
+        }
+      }
     });
   </script>
 </body>

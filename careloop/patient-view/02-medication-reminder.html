@@ -11,6 +11,16 @@
   <script src="../shared/sound.js"></script>
   <script src="../shared/translations.js"></script>
   <script src="../shared/api.js"></script>
+  <!-- Supabase Integration -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    window.CARELOOP_CONFIG = {
+      SUPABASE_URL: 'https://hdxqoozhrvthnobpjffl.supabase.co',
+      SUPABASE_ANON_KEY: 'sb_publishable_wQ_JEWk80D8aVqyZg7Zgtw_LTWDY-Ea'
+    };
+  </script>
+  <script src="../shared/supabaseClient.js"></script>
+  <script src="../shared/supabaseSync.js"></script>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
@@ -346,6 +356,11 @@
       if (target) {
         target.status = 'taken';
         saveMedications(list);
+        if (window.CareLoopSync && window.CareLoopSync.updateMedicationStatus) {
+          window.CareLoopSync.updateMedicationStatus(id, 'taken').catch(function(err) {
+            console.warn('[Supabase] Update status failed:', err);
+          });
+        }
       }
     }
 
@@ -356,6 +371,11 @@
       if (target) {
         target.status = 'snoozed';
         saveMedications(list);
+        if (window.CareLoopSync && window.CareLoopSync.updateMedicationStatus) {
+          window.CareLoopSync.updateMedicationStatus(id, 'snoozed').catch(function(err) {
+            console.warn('[Supabase] Update status failed:', err);
+          });
+        }
       }
     }
 
@@ -365,6 +385,11 @@
       if (target) {
         target.status = 'pending';
         saveMedications(list);
+        if (window.CareLoopSync && window.CareLoopSync.updateMedicationStatus) {
+          window.CareLoopSync.updateMedicationStatus(id, 'pending').catch(function(err) {
+            console.warn('[Supabase] Update status failed:', err);
+          });
+        }
       }
     }
 
@@ -373,6 +398,11 @@
       let list = getMedications();
       list = list.filter(m => m.id !== id);
       saveMedications(list);
+      if (window.CareLoopSync && window.CareLoopSync.deleteMedication) {
+        window.CareLoopSync.deleteMedication(id).catch(function(err) {
+          console.warn('[Supabase] Delete medication failed:', err);
+        });
+      }
     }
 
     function openAddModal() {
@@ -418,6 +448,12 @@
       const list = getMedications();
       list.push(newMed);
       saveMedications(list);
+
+      if (window.CareLoopSync && window.CareLoopSync.upsertMedication) {
+        window.CareLoopSync.upsertMedication(newMed).catch(function(err) {
+          console.warn('[Supabase] Upsert new med failed:', err);
+        });
+      }
 
       if (window.careLoopSound) window.careLoopSound.playSuccess();
       closeAddModal();
@@ -467,10 +503,26 @@
       }
     });
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       renderMedications();
       const currentLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
       applyLanguage(currentLang);
+
+      // Async sync from Supabase if available
+      if (window.CareLoopSync && window.CareLoopSync.fetchMedications) {
+        try {
+          const cloudMeds = await window.CareLoopSync.fetchMedications();
+          if (cloudMeds && cloudMeds.length > 0) {
+            renderMedications();
+          } else {
+            // If Supabase table is empty, seed defaults to cloud
+            const localMeds = getMedications();
+            window.CareLoopSync.syncAllMedications(localMeds).catch(() => {});
+          }
+        } catch(err) {
+          console.warn('[Supabase] Initial med fetch error (using local):', err);
+        }
+      }
     });
   </script>
 </body>

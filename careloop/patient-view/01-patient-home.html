@@ -19,6 +19,16 @@
   <script src="../shared/voiceManager.js"></script>
   <script src="../shared/sound.js"></script>
   <script src="../shared/api.js"></script>
+  <!-- Supabase Integration -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    window.CARELOOP_CONFIG = {
+      SUPABASE_URL: 'https://hdxqoozhrvthnobpjffl.supabase.co',
+      SUPABASE_ANON_KEY: 'sb_publishable_wQ_JEWk80D8aVqyZg7Zgtw_LTWDY-Ea'
+    };
+  </script>
+  <script src="../shared/supabaseClient.js"></script>
+  <script src="../shared/supabaseSync.js"></script>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body {
@@ -562,6 +572,18 @@
           initials: initial
         }));
         localStorage.setItem('careloop_authenticated', 'true');
+
+        if (window.CareLoopSync && window.CareLoopSync.upsertProfile) {
+          window.CareLoopSync.upsertProfile({
+            name: finalName,
+            age: parseInt(finalAge, 10) || 0,
+            role: finalRole,
+            initials: initial,
+            language: appLanguage || 'en'
+          }).catch(function(err) {
+            console.warn('[Supabase] Profile upsert failed (cached locally):', err);
+          });
+        }
 
         // 2. Update local state
         setUserInitial(initial);

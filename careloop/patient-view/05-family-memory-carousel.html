@@ -156,6 +156,16 @@
 <script src="../shared/sound.js"></script>
 <script src="../shared/translations.js"></script>
 <script src="../shared/api.js"></script>
+<!-- Supabase Integration -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  window.CARELOOP_CONFIG = {
+    SUPABASE_URL: 'https://hdxqoozhrvthnobpjffl.supabase.co',
+    SUPABASE_ANON_KEY: 'sb_publishable_wQ_JEWk80D8aVqyZg7Zgtw_LTWDY-Ea'
+  };
+</script>
+<script src="../shared/supabaseClient.js"></script>
+<script src="../shared/supabaseSync.js"></script>
 <script>
 const CAROUSEL_MEMBERS = [
   {
@@ -302,10 +312,32 @@ function applyLanguage(code) {
   updateSlide();
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   updateSlide();
   const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en';
   applyLanguage(activeLang);
+
+  // Sync contacts from Supabase if available
+  if (window.CareLoopSync && window.CareLoopSync.fetchContacts) {
+    try {
+      const cloud = await window.CareLoopSync.fetchContacts();
+      if (cloud && cloud.length > 0) {
+        CAROUSEL_MEMBERS.length = 0;
+        cloud.forEach(c => {
+          CAROUSEL_MEMBERS.push({
+            id: c.id,
+            name: c.name.split(' ')[0],
+            relation: `This is ${c.name} — your ${c.relation || 'family'}`,
+            callLabel: `Call ${c.name.split(' ')[0]}`,
+            avatar: c.avatar || c.avatar_url || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80'
+          });
+        });
+        updateSlide();
+      }
+    } catch(err) {
+      console.warn('[Supabase] Carousel contacts fetch failed (using local):', err);
+    }
+  }
 });
 </script>
 

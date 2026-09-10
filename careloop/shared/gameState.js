@@ -56,6 +56,14 @@
       }
 
       this._save();
+
+      // Cloud sync to Supabase if available
+      if (typeof window !== 'undefined' && window.CareLoopSync && window.CareLoopSync.insertGameLog) {
+        window.CareLoopSync.insertGameLog(entry).catch(function(err) {
+          console.warn('[Supabase] Game log insert failed (cached locally):', err);
+        });
+      }
+
       return entry;
     }
 
