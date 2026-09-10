@@ -113,13 +113,13 @@
           <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
           CareLoop Companion
         </div>
-        <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight" id="greeting-text">Good Morning, Keshav</h1>
+        <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight" id="greeting-text">Good Morning</h1>
         <p class="text-xs text-slate-500 font-medium" id="date-display">Thursday, 4 September 2026</p>
       </div>
 
       <!-- React Profile Avatar Mount Point -->
       <div id="header-profile-root">
-        <button id="header-profile-btn" onclick="window.triggerOpenAuth && window.triggerOpenAuth()" class="w-12 h-12 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center font-bold text-lg shadow-sm border border-blue-200 cursor-pointer transition-all active:scale-95" title="User Profile / Language Switcher">
+        <button id="header-profile-btn" onclick="window.triggerOpenAccountMenu ? window.triggerOpenAccountMenu() : (window.triggerOpenAuth && window.triggerOpenAuth())" class="w-12 h-12 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center font-bold text-lg shadow-sm border border-blue-200 cursor-pointer transition-all active:scale-95" title="CareLoop Account & Profile">
           <span id="header-profile-initial">K</span>
         </button>
       </div>
@@ -393,11 +393,18 @@
         subTimeEl.textContent = subMap[activeLang] || subMap.en;
       }
 
-      const patientFullName = localStorage.getItem('careloop_patient_name') || 'Keshav Sharma';
-      const patientFirstName = patientFullName.trim().split(' ')[0] || 'Keshav';
+      const patientFullName = localStorage.getItem('careloop_patient_name') || '';
       const greetingEl = document.getElementById('greeting-text');
       if (greetingEl) {
-        greetingEl.textContent = `${greetingWord}, ${patientFirstName}`;
+        if (patientFullName && patientFullName.trim()) {
+          greetingEl.textContent = `${greetingWord}, ${patientFullName.trim()}`;
+        } else {
+          greetingEl.textContent = `${greetingWord}`;
+        }
+      }
+      const initialEl = document.getElementById('header-profile-initial');
+      if (initialEl && patientFullName && patientFullName.trim()) {
+        initialEl.textContent = patientFullName.trim().charAt(0).toUpperCase();
       }
 
       const emContact = localStorage.getItem('careloop_emergency_contact') || 'Priya Sharma';
@@ -476,23 +483,166 @@
     const { useState, useEffect } = React;
 
     function HeaderProfileAndAuthModal() {
+      const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
       const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
       const [step, setStep] = useState(1);
       const [selectedDemo, setSelectedDemo] = useState('patient'); // 'caregiver' | 'patient'
-      const [fullName, setFullName] = useState(() => localStorage.getItem('careloop_patient_name') || 'Keshav Sharma');
-      const [age, setAge] = useState('74');
+      const [fullName, setFullName] = useState(() => localStorage.getItem('careloop_patient_name') || '');
+      const [age, setAge] = useState(() => {
+        try {
+          const p = JSON.parse(localStorage.getItem('careloop_user_profile') || 'null');
+          return p?.age ? String(p.age) : '';
+        } catch (_) { return ''; }
+      });
       const [role, setRole] = useState(() => localStorage.getItem('careloop_user_role') || 'patient');
       const [appLanguage, setAppLanguage] = useState(() => localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || 'en');
       const [userInitial, setUserInitial] = useState(() => {
-        const name = localStorage.getItem('careloop_patient_name') || 'Keshav Sharma';
-        return name.trim().charAt(0).toUpperCase() || 'K';
+        const name = localStorage.getItem('careloop_patient_name') || '';
+        return name.trim() ? name.trim().charAt(0).toUpperCase() : 'K';
       });
+      const [sessionActive, setSessionActive] = useState(() => localStorage.getItem('careloop_authenticated') === 'true');
+      const [activeUser, setActiveUser] = useState(null);
+
+      // LIVE SUPABASE PROFILE SYNC (Fetches live profile from Supabase profiles table)
+      const syncLiveProfile = async (authUser) => {
+        const client = window.CareLoopSupabase || window.supabaseClient;
+        if (!client) return;
+
+        try {
+          let user = authUser;
+          if (!user) {
+            const { data: userData } = await client.auth.getUser();
+            user = userData ? userData.user : null;
+          }
+
+          if (user && user.id) {
+            setSessionActive(true);
+            setActiveUser(user);
+
+            // Fetch live profile from profiles table
+            const { data, error } = await client
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+
+            if (data && !error) {
+              const realName = data.full_name || data.name || (user.user_metadata && user.user_metadata.full_name) || user.email.split('@')[0];
+              const realAge = data.age ? String(data.age) : '';
+              const realLang = data.preferred_language || 'en';
+              const realRole = data.role || 'patient';
+              const initial = realName.trim() ? realName.trim().charAt(0).toUpperCase() : 'K';
+
+              setFullName(realName);
+              setAge(realAge);
+              setRole(realRole);
+              setAppLanguage(realLang);
+              setUserInitial(initial);
+
+              localStorage.setItem('careloop_authenticated', 'true');
+              localStorage.setItem('careloop_patient_name', realName);
+              localStorage.setItem('careloop_app_language', realLang);
+              localStorage.setItem('careloop_lang', realLang);
+              localStorage.setItem('careloop_user_role', realRole);
+              localStorage.setItem('careloop_user_profile', JSON.stringify({
+                ...data,
+                name: realName,
+                age: realAge,
+                initials: initial
+              }));
+
+              if (typeof updateClock === 'function') updateClock();
+              if (typeof applyLanguage === 'function') applyLanguage(realLang);
+
+              const initEl = document.getElementById('header-profile-initial');
+              if (initEl) initEl.textContent = initial;
+
+              try {
+                window.parent.postMessage({
+                  type: 'patientUpdated',
+                  name: realName,
+                  role: realRole,
+                  profile: data
+                }, '*');
+              } catch (_) {}
+            } else if (user) {
+              const metaName = (user.user_metadata && (user.user_metadata.patient_name || user.user_metadata.full_name)) || user.email.split('@')[0];
+              setFullName(metaName);
+              setUserInitial(metaName.charAt(0).toUpperCase() || 'K');
+              if (typeof updateClock === 'function') updateClock();
+            }
+          } else {
+            setSessionActive(false);
+            setActiveUser(null);
+          }
+        } catch (err) {
+          console.warn('[HeaderProfile] Sync profile warning:', err);
+        }
+      };
+
+      // CLEAN SIGN OUT (Clears Supabase session and local state)
+      const handleCleanSignOut = async () => {
+        const client = window.CareLoopSupabase || window.supabaseClient;
+        try {
+          if (client) await client.auth.signOut();
+        } catch (_) {}
+
+        localStorage.removeItem('careloop_authenticated');
+        localStorage.removeItem('careloop_user_profile');
+        localStorage.removeItem('careloop_user_role');
+        localStorage.removeItem('careloop_patient_name');
+
+        setFullName('');
+        setAge('');
+        setUserInitial('?');
+        setSessionActive(false);
+        setActiveUser(null);
+        setIsAccountMenuOpen(false);
+        setIsAuthModalOpen(false);
+
+        if (typeof updateClock === 'function') updateClock();
+        const initEl = document.getElementById('header-profile-initial');
+        if (initEl) initEl.textContent = '?';
+
+        try {
+          window.parent.postMessage({ type: 'signOut' }, '*');
+        } catch (_) {}
+
+        try { window.careLoopSound?.playPop?.(); } catch (_) {}
+      };
 
       useEffect(() => {
+        window.triggerOpenAccountMenu = () => {
+          setIsAccountMenuOpen(true);
+        };
         window.triggerOpenAuth = () => {
+          setIsAccountMenuOpen(false);
           setIsAuthModalOpen(true);
           setStep(1);
         };
+
+        const client = window.CareLoopSupabase || window.supabaseClient;
+        if (client) {
+          // 1. Initial active authenticated user check on mount
+          client.auth.getUser().then(({ data: userData }) => {
+            if (userData?.user) {
+              syncLiveProfile(userData.user);
+            }
+          });
+
+          // 2. Whenever Supabase auth state changes
+          const { data: listener } = client.auth.onAuthStateChange(async (event, session) => {
+            if ((event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') && session?.user) {
+              await syncLiveProfile(session.user);
+            } else if (event === 'SIGNED_OUT') {
+              handleCleanSignOut();
+            }
+          });
+
+          return () => {
+            if (listener?.subscription) listener.subscription.unsubscribe();
+          };
+        }
       }, []);
 
       useEffect(() => {
@@ -528,7 +678,7 @@
       };
 
       const [authMode, setAuthMode] = useState('otp'); // 'otp' | 'password'
-      const [email, setEmail] = useState('rahul@careloop.health');
+      const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
       const [otpToken, setOtpToken] = useState('');
       const [authLoading, setAuthLoading] = useState(false);
@@ -581,9 +731,8 @@
               console.warn("Audio playback skipped:", err);
             }
             const user = data.user;
-            const displayName = (user && user.user_metadata && user.user_metadata.full_name) || email.split('@')[0];
-            setFullName(displayName);
-            completeAuth(displayName, 'caregiver');
+            await syncLiveProfile(user);
+            setIsAuthModalOpen(false);
           } catch(err) {
             setAuthError(err.message || 'Authentication error.');
           } finally {
@@ -684,8 +833,14 @@
         completeAuth(name, userRole, userAge);
       };
 
-      const completeAuth = (finalName, finalRole, finalAge = age) => {
-        const initial = finalName.charAt(0).toUpperCase();
+      const completeAuth = async (finalName, finalRole, finalAge = age) => {
+        const initial = finalName.trim() ? finalName.trim().charAt(0).toUpperCase() : 'K';
+        setFullName(finalName);
+        setAge(finalAge);
+        setRole(finalRole);
+        setUserInitial(initial);
+        setSessionActive(true);
+
         localStorage.setItem('careloop_patient_name', finalName);
         localStorage.setItem('careloop_user_role', finalRole);
         localStorage.setItem('careloop_user_profile', JSON.stringify({
@@ -696,27 +851,40 @@
         }));
         localStorage.setItem('careloop_authenticated', 'true');
 
-        if (window.CareLoopSync && window.CareLoopSync.upsertProfile) {
-          window.CareLoopSync.upsertProfile({
-            name: finalName,
-            age: parseInt(finalAge, 10) || 0,
-            role: finalRole,
-            initials: initial,
-            language: appLanguage || 'en'
-          }).catch(() => {});
+        const client = window.CareLoopSupabase || window.supabaseClient;
+        if (client) {
+          try {
+            const { data: { user } } = await client.auth.getUser();
+            if (user && user.id) {
+              const parsedAge = finalAge && !isNaN(finalAge) ? parseInt(finalAge, 10) : null;
+              await client.from('profiles').upsert({
+                id: user.id,
+                full_name: finalName,
+                name: finalName,
+                age: parsedAge,
+                role: finalRole || 'caregiver',
+                preferred_language: appLanguage || 'English'
+              }, { onConflict: 'id' });
+            }
+          } catch (syncErr) {
+            console.warn('[completeAuth] Supabase upsert notice:', syncErr);
+          }
         }
 
-        setUserInitial(initial);
         setIsAuthModalOpen(false);
+        setIsAccountMenuOpen(false);
         setStep(1);
 
         if (typeof updateClock === 'function') updateClock();
+        const initEl = document.getElementById('header-profile-initial');
+        if (initEl) initEl.textContent = initial;
 
         try {
           window.parent.postMessage({
             type: 'patientUpdated',
             name: finalName,
-            role: finalRole
+            role: finalRole,
+            profile: { full_name: finalName, age: finalAge, role: finalRole }
           }, '*');
         } catch(err) {}
 
@@ -735,23 +903,143 @@
       // STEP 3: Save & Enter App
       const handleSaveAndEnter = (e) => {
         if (e) e.preventDefault();
-        completeAuth(fullName.trim() || 'Keshav Sharma', role, age);
+        completeAuth(fullName.trim() || 'Companion', role, age);
       };
 
       return (
         <React.Fragment>
-          {/* Circular Profile/User Icon in Top Right */}
+          {/* Circular Profile/User Icon in Top Right Header */}
           <button
             type="button"
-            onClick={() => {
-              setIsAuthModalOpen(true);
-              setStep(1);
-            }}
-            className="w-12 h-12 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center font-bold text-lg shadow-sm border border-blue-200 cursor-pointer transition-all active:scale-95"
-            title="User Profile / Language Switcher"
+            onClick={() => setIsAccountMenuOpen(true)}
+            className="w-12 h-12 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center font-bold text-lg shadow-sm border border-blue-200 cursor-pointer transition-all active:scale-95 relative"
+            title="CareLoop Account & Profile"
           >
-            <span>{userInitial}</span>
+            <span>{userInitial || 'K'}</span>
+            {sessionActive && (
+              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-xs"></span>
+            )}
           </button>
+
+          {/* ═══ ACCOUNT MENU POPUP MODAL ═══ */}
+          {isAccountMenuOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn"
+              onClick={() => setIsAccountMenuOpen(false)}
+            >
+              <div
+                className="w-full max-w-[380px] bg-white rounded-3xl shadow-2xl border border-white/80 p-5 relative text-slate-800 animate-modal overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+                      <span className="material-symbols-outlined text-[18px]">account_circle</span>
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-sm text-slate-800">CareLoop Account</div>
+                      <div className="text-[10px] font-mono font-semibold text-slate-400">
+                        {sessionActive ? 'LIVE SESSION ACTIVE' : 'LOCAL / GUEST SESSION'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAccountMenuOpen(false)}
+                    className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                </div>
+
+                {/* Profile Card */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-100 mb-4 flex items-center gap-3">
+                  <div className="w-13 h-13 rounded-full bg-blue-600 text-white flex items-center justify-center font-extrabold text-xl shadow-md shrink-0">
+                    {userInitial || 'K'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-extrabold text-base text-slate-900 truncate">
+                      {fullName || 'Guest Patient'}
+                    </div>
+                    <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
+                      <span className="capitalize">{role || 'Patient'}</span>
+                      {age && <span>· Age {age}</span>}
+                    </div>
+                    <div className="text-[11px] font-medium text-emerald-600 flex items-center gap-1 mt-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>{sessionActive ? 'Supabase Authenticated' : 'Offline / Demo Mode'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Account Actions */}
+                <div className="space-y-2 mb-4">
+                  {/* Switch / Edit Account */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAccountMenuOpen(false);
+                      setStep(sessionActive ? 3 : 1);
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="w-full py-2.5 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center justify-between cursor-pointer transition-all active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                      <span>Switch / Edit Account</span>
+                    </div>
+                    <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                  </button>
+
+                  {/* Log Out */}
+                  <button
+                    type="button"
+                    onClick={handleCleanSignOut}
+                    className="w-full py-2.5 px-3.5 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold text-xs flex items-center justify-between cursor-pointer transition-all active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-red-500">logout</span>
+                      <span>Log Out</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-red-400">Clear Session</span>
+                  </button>
+                </div>
+
+                {/* Regional Language Picker */}
+                <div className="pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-blue-600">translate</span>
+                      Language / भाषा
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { code: 'en', label: 'English' },
+                      { code: 'hi', label: 'हिन्दी' },
+                      { code: 'as', label: 'অসমীয়া' },
+                      { code: 'brx', label: 'बड़ो' }
+                    ].map((l) => (
+                      <button
+                        key={l.code}
+                        type="button"
+                        onClick={() => handleLanguageSelect(l.code)}
+                        className={`py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
+                          appLanguage === l.code
+                            ? 'bg-blue-500 text-white shadow-xs'
+                            : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {appLanguage === l.code && <span className="material-symbols-outlined text-[13px]">check</span>}
+                        <span>{l.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Centered 3-Step Prototype Authentication / User Switcher Modal */}
           {isAuthModalOpen && (

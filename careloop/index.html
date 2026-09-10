@@ -551,15 +551,6 @@
       <span class="material-symbols-outlined" id="theme-icon">light_mode</span>
     </button>
 
-    <!-- Circular Profile / Avatar Button in Top-Right Corner -->
-    <div style="position:relative; display:inline-flex; align-items:center;">
-      <button id="top-profile-btn" onclick="openLoginModal()" title="Demo Profile / Switch Account" style="position:relative; width:34px; height:34px; border-radius:50%; border:1.5px solid var(--border-subtle); background:var(--bg-surface-raised); color:var(--text-primary); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 150ms ease; padding:0;">
-        <span id="top-profile-icon" class="material-symbols-outlined" style="font-size:19px;">person</span>
-        <span id="top-profile-initials" style="display:none; font-size:13px; font-weight:700; color:var(--accent); font-family:'Inter',sans-serif;">R</span>
-        <!-- Active Green Dot Indicator -->
-        <span id="top-profile-dot" style="display:none; position:absolute; bottom:-1px; right:-1px; width:9px; height:9px; border-radius:50%; background:#4ADE94; border:2px solid var(--bg-canvas);"></span>
-      </button>
-    </div>
 
     <span id="api-status-badge" style="font-size:11px; font-family:'JetBrains Mono',monospace; padding:3px 9px; border-radius:12px; background:rgba(74,222,148,0.12); color:var(--accent); border:1px solid rgba(74,222,148,0.3); display:inline-flex; align-items:center; gap:5px;">
       <span style="width:6px; height:6px; border-radius:50%; background:var(--accent); display:inline-block;"></span>
@@ -1775,23 +1766,7 @@
 
   function applyAuthenticatedProfile(profile) {
     if (!profile) return;
-    const initial = (profile.initials || profile.name.charAt(0)).toUpperCase();
-
-    // Update Top-Right Profile / Avatar Button
-    const iconEl = document.getElementById('top-profile-icon');
-    const initialsEl = document.getElementById('top-profile-initials');
-    const dotEl = document.getElementById('top-profile-dot');
-    const btn = document.getElementById('top-profile-btn');
-
-    if (iconEl) iconEl.style.display = 'none';
-    if (initialsEl) {
-      initialsEl.textContent = initial;
-      initialsEl.style.display = 'inline-block';
-    }
-    if (dotEl) dotEl.style.display = 'block';
-    if (btn) btn.title = `${profile.name} (${profile.role === 'caregiver' ? 'Caregiver' : 'Patient'}) — Click to switch account`;
-
-    if (profile.role === 'patient') {
+    if (profile.name) {
       updateSidebarPatientBadge(profile.name);
     }
   }
@@ -1810,16 +1785,7 @@
     currentUser = null;
     isAuthenticated = false;
 
-    const iconEl = document.getElementById('top-profile-icon');
-    const initialsEl = document.getElementById('top-profile-initials');
-    const dotEl = document.getElementById('top-profile-dot');
-    const btn = document.getElementById('top-profile-btn');
-    if (iconEl) iconEl.style.display = 'inline-block';
-    if (initialsEl) initialsEl.style.display = 'none';
-    if (dotEl) dotEl.style.display = 'none';
-    if (btn) btn.title = 'Sign In / Switch Account';
-
-    openLoginModal();
+    updateSidebarPatientBadge('Patient');
   }
 
   // ═══════════════════════════════════════
@@ -1831,9 +1797,9 @@
     if (langSelect && currentLang) langSelect.value = currentLang;
     changeGlobalLanguage(currentLang);
 
-    const savedPatient = localStorage.getItem('careloop_patient_name') || 'Kamala Sharma';
+    const savedPatient = localStorage.getItem('careloop_patient_name') || '';
     const patientNameEl = document.getElementById('sidebar-patient-name');
-    if (patientNameEl) patientNameEl.textContent = savedPatient;
+    if (patientNameEl) patientNameEl.textContent = savedPatient || 'Patient';
 
     function updatePhoneClock() {
       const clockEl = document.getElementById('phone-clock');
@@ -1846,32 +1812,52 @@
     updatePhoneClock();
     setInterval(updatePhoneClock, 1000);
 
-    // ── Supabase Session Persistence ──────────────────────────────────
+    // ── Supabase Session Persistence & Live Profile Sync ───────────────
     const client = window.CareLoopSupabase || window.supabaseClient;
     if (client) {
       // Check for existing session on page load
-      client.auth.getSession().then(({ data: { session } }) => {
+      client.auth.getSession().then(async ({ data: { session } }) => {
         if (session && session.user) {
           const user = session.user;
-          const savedProfile = JSON.parse(localStorage.getItem('careloop_user_profile') || 'null');
-          const displayName = (user.user_metadata && user.user_metadata.full_name)
-            || (savedProfile && savedProfile.name)
+          // Live profile fetch from Supabase profiles table
+          let profileData = null;
+          try {
+            const res = await client
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+            profileData = res.data;
+          } catch (_) {}
+
+          const realName = (profileData && (profileData.full_name || profileData.name))
+            || (user.user_metadata && (user.user_metadata.patient_name || user.user_metadata.full_name))
             || user.email.split('@')[0];
-          const role = (savedProfile && savedProfile.role) || localStorage.getItem('careloop_user_role') || 'patient';
-          const age = (savedProfile && savedProfile.age) || 45;
+          const realAge = (profileData && profileData.age) || 45;
+          const realRole = (profileData && profileData.role) || 'caregiver';
+          const realLang = (profileData && profileData.preferred_language) || localStorage.getItem('careloop_app_language') || 'English';
 
           currentUser = {
-            name: displayName,
-            age: age,
-            role: role,
-            initials: displayName.charAt(0).toUpperCase(),
+            name: realName,
+            age: realAge,
+            role: realRole,
+            preferred_language: realLang,
+            initials: realName.charAt(0).toUpperCase(),
             email: user.email
           };
           isAuthenticated = true;
           localStorage.setItem('careloop_authenticated', 'true');
+          localStorage.setItem('careloop_patient_name', realName);
           localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
-          applyAuthenticatedProfile(currentUser);
-          console.log('[CareLoop] Restored Supabase session for', user.email);
+          updateSidebarPatientBadge(realName);
+          console.log('[CareLoop] Restored live Supabase session for', realName);
+
+          const frame = document.getElementById('frame');
+          const mobileFrame = document.getElementById('mobile-frame');
+          try {
+            if (frame?.contentWindow) frame.contentWindow.postMessage({ type: 'patientUpdated', name: realName, role: realRole, profile: profileData }, '*');
+            if (mobileFrame?.contentWindow) mobileFrame.contentWindow.postMessage({ type: 'patientUpdated', name: realName, role: realRole, profile: profileData }, '*');
+          } catch (_) {}
         } else {
           // No active Supabase session — check localStorage demo fallback
           const localAuth = localStorage.getItem('careloop_authenticated');
@@ -1898,35 +1884,51 @@
       });
 
       // Listen for auth state changes (login/logout from other tabs, token refresh)
-      client.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session && session.user) {
+      client.auth.onAuthStateChange(async (event, session) => {
+        if ((event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') && session && session.user) {
           const user = session.user;
-          const displayName = (user.user_metadata && user.user_metadata.full_name) || user.email.split('@')[0];
-          if (!isAuthenticated) {
-            currentUser = {
-              name: displayName,
-              age: 45,
-              role: localStorage.getItem('careloop_user_role') || 'patient',
-              initials: displayName.charAt(0).toUpperCase(),
-              email: user.email
-            };
-            isAuthenticated = true;
-            localStorage.setItem('careloop_authenticated', 'true');
-            localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
-            applyAuthenticatedProfile(currentUser);
-          }
+          let profileData = null;
+          try {
+            const res = await client
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+            profileData = res.data;
+          } catch (_) {}
+
+          const realName = (profileData && (profileData.full_name || profileData.name))
+            || (user.user_metadata && (user.user_metadata.patient_name || user.user_metadata.full_name))
+            || user.email.split('@')[0];
+          const realAge = (profileData && profileData.age) || 45;
+          const realRole = (profileData && profileData.role) || 'caregiver';
+
+          currentUser = {
+            name: realName,
+            age: realAge,
+            role: realRole,
+            initials: realName.charAt(0).toUpperCase(),
+            email: user.email
+          };
+          isAuthenticated = true;
+          localStorage.setItem('careloop_authenticated', 'true');
+          localStorage.setItem('careloop_patient_name', realName);
+          localStorage.setItem('careloop_user_profile', JSON.stringify(currentUser));
+          updateSidebarPatientBadge(realName);
+
+          const frame = document.getElementById('frame');
+          const mobileFrame = document.getElementById('mobile-frame');
+          try {
+            if (frame?.contentWindow) frame.contentWindow.postMessage({ type: 'patientUpdated', name: realName, role: realRole, profile: profileData }, '*');
+            if (mobileFrame?.contentWindow) mobileFrame.contentWindow.postMessage({ type: 'patientUpdated', name: realName, role: realRole, profile: profileData }, '*');
+          } catch (_) {}
         } else if (event === 'SIGNED_OUT') {
           isAuthenticated = false;
           currentUser = null;
           localStorage.removeItem('careloop_authenticated');
           localStorage.removeItem('careloop_user_profile');
-          // Reset profile UI
-          const iconEl = document.getElementById('top-profile-icon');
-          const initialsEl = document.getElementById('top-profile-initials');
-          const dotEl = document.getElementById('top-profile-dot');
-          if (iconEl) iconEl.style.display = 'inline-block';
-          if (initialsEl) initialsEl.style.display = 'none';
-          if (dotEl) dotEl.style.display = 'none';
+          localStorage.removeItem('careloop_patient_name');
+          updateSidebarPatientBadge('Patient');
         }
       });
     } else {
@@ -2032,7 +2034,7 @@
           frame.contentWindow.postMessage({ type: 'themeChange', theme: currentTheme }, '*');
           const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || currentLang || 'en';
           frame.contentWindow.postMessage({ type: 'languageChange', code: activeLang, appLanguage: activeLang }, '*');
-          frame.contentWindow.postMessage({ type: 'patientUpdated', name: localStorage.getItem('careloop_patient_name') || 'Kamala Sharma' }, '*');
+          frame.contentWindow.postMessage({ type: 'patientUpdated', name: localStorage.getItem('careloop_patient_name') || '' }, '*');
         }
       } catch (e) {}
     };
@@ -2073,7 +2075,7 @@
           mf.contentWindow.postMessage({ type: 'themeChange', theme: currentTheme }, '*');
           const activeLang = localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang') || currentLang || 'en';
           mf.contentWindow.postMessage({ type: 'languageChange', code: activeLang, appLanguage: activeLang }, '*');
-          mf.contentWindow.postMessage({ type: 'patientUpdated', name: localStorage.getItem('careloop_patient_name') || 'Kamala Sharma' }, '*');
+          mf.contentWindow.postMessage({ type: 'patientUpdated', name: localStorage.getItem('careloop_patient_name') || '' }, '*');
         }
       } catch (e) {}
     };
@@ -2251,24 +2253,32 @@
     } catch(e) {}
   }
 
-  window.addEventListener('message', e => {
+  window.addEventListener('message', async e => {
     if (!e.data) return;
     if ((e.data.type === 'languageChange' || e.data.type === 'appLanguageChange') && e.data.code) {
       setGlobalLanguage(e.data.code);
     }
 
+    if (e.data.type === 'openLoginModal') {
+      openLoginModal();
+    }
+
+    if (e.data.type === 'signOut') {
+      await signOutAuth();
+    }
+
     if (e.data.type === 'patientUpdated') {
-      const name = e.data.name || localStorage.getItem('careloop_patient_name') || 'Kamala Sharma';
+      const name = e.data.name || localStorage.getItem('careloop_patient_name') || 'Patient';
       updateSidebarPatientBadge(name);
 
       // Forward to active frames
       const frame = document.getElementById('frame');
       const mobileFrame = document.getElementById('mobile-frame');
       try {
-        if (frame && frame.contentWindow) {
+        if (frame && frame.contentWindow && e.source !== frame.contentWindow) {
           frame.contentWindow.postMessage(e.data, '*');
         }
-        if (mobileFrame && mobileFrame.contentWindow) {
+        if (mobileFrame && mobileFrame.contentWindow && e.source !== mobileFrame.contentWindow) {
           mobileFrame.contentWindow.postMessage(e.data, '*');
         }
       } catch(err) {}

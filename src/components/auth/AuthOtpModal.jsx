@@ -44,15 +44,29 @@ export function AuthOtpModal({
 
   // Profile Setup (Two Columns)
   // Column 1: Patient
-  const [patientName, setPatientName] = useState('Kamala Sharma');
-  const [age, setAge] = useState('74');
-  const [language, setLanguage] = useState('English');
-  const [notes, setNotes] = useState('Mild Cognitive Impairment (Early Memory Support)');
+  const [patientName, setPatientName] = useState(() => {
+    return (typeof localStorage !== 'undefined' && localStorage.getItem('careloop_patient_name')) || '';
+  });
+  const [age, setAge] = useState(() => {
+    try {
+      const p = typeof localStorage !== 'undefined' && JSON.parse(localStorage.getItem('careloop_user_profile') || 'null');
+      return p?.age ? String(p.age) : '';
+    } catch(_) { return ''; }
+  });
+  const [language, setLanguage] = useState(() => {
+    return (typeof localStorage !== 'undefined' && (localStorage.getItem('careloop_app_language') || localStorage.getItem('careloop_lang'))) || 'English';
+  });
+  const [notes, setNotes] = useState('');
 
   // Column 2: Caregiver
-  const [caregiverName, setCaregiverName] = useState('Rahul Sharma');
+  const [caregiverName, setCaregiverName] = useState(() => {
+    try {
+      const p = typeof localStorage !== 'undefined' && JSON.parse(localStorage.getItem('careloop_user_profile') || 'null');
+      return p?.caregiver_name || '';
+    } catch(_) { return ''; }
+  });
   const [relationship, setRelationship] = useState('Daughter');
-  const [caregiverPhone, setCaregiverPhone] = useState('+91 98765 43210');
+  const [caregiverPhone, setCaregiverPhone] = useState('');
 
   // Status & Error Banners
   const [loading, setLoading] = useState(false);
@@ -72,6 +86,39 @@ export function AuthOtpModal({
       setEmail(initialEmail);
     }
   }, [initialEmail]);
+
+  // Live profile fetch from Supabase database
+  useEffect(() => {
+    async function loadLiveProfile() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user;
+        if (user?.id) {
+          setAuthenticatedUser(user);
+          if (user.email && !email) setEmail(user.email);
+
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (profile) {
+            const pName = profile.full_name || profile.name || '';
+            if (pName) setPatientName(pName);
+            if (profile.age) setAge(String(profile.age));
+            if (profile.preferred_language) setLanguage(profile.preferred_language);
+            if (profile.phone) setCaregiverPhone(profile.phone);
+            if (profile.relationship) setRelationship(profile.relationship);
+            if (profile.notes) setNotes(profile.notes);
+          }
+        }
+      } catch (err) {
+        console.warn('[AuthOtpModal] Live profile fetch notice:', err.message);
+      }
+    }
+    loadLiveProfile();
+  }, []);
 
   // Handle countdown interval
   useEffect(() => {
