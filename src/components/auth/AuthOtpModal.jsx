@@ -4,35 +4,23 @@ import {
   verifyEmailOtp,
   updateUserPassword,
   signInWithPassword,
-  upsertProfile,
+  saveCareProfile,
   getCurrentUser,
-  getSession,
-  getFriendlyAuthErrorMessage
+  getSession
 } from '../../services/authService.js';
 
 /**
  * CareLoop AuthOtpModal
  * ====================
- * Comprehensive 5-Stage Authentication & Onboarding Pipeline:
- *
- * 1. 'EMAIL'          - Request 6-digit OTP via email with 60s cooldown.
- *                       Toggle option to switch to 'PASSWORD_LOGIN'.
- * 2. 'PASSWORD_LOGIN' - Direct email + password login for returning users.
- *                       Toggle option to switch back to 'EMAIL'.
- * 3. 'OTP'            - Enter 6-digit verification code. Immediately advances to 'SET_PASSWORD'.
- * 4. 'SET_PASSWORD'   - Post-OTP password setup with confirmation (min 6 chars).
- *                       "Skip for now" link advances directly to 'PROFILE_SETUP'.
- * 5. 'PROFILE_SETUP'  - Dual-column responsive grid (md:grid-cols-2):
- *                       • Column 1 (Patient): Name, Age, Preferred Language (English, Assamese, Bodo, Hindi), Cognitive Stage/Notes.
- *                       • Column 2 (Caregiver): Name, Relationship dropdown, Emergency Contact Phone.
- *                       • Save Profile: Upserts all 8 fields into Supabase `profiles` table.
- *
- * Accessibility & UX:
- * - 56px+ minimum tap target height (h-14 / min-h-[56px]) on all inputs & buttons
- * - Calm Cloud Blue palette (blue-600, slate-900, slate-200, focus:border-blue-500)
- * - Explicit button types (type="submit" / type="button")
- * - Dedicated error banner surfacing Supabase errors visually
- * - Non-blocking scrollable dialog layout (no unclickable Save button bugs)
+ * Strict 4-Step Sequence:
+ * 1. EMAIL          - Email OTP request with toggle to PASSWORD_LOGIN.
+ * 2. OTP            - 6-digit numeric token verification (advances to SET_PASSWORD).
+ * 3. SET_PASSWORD   - Create New Password & Confirm Password (advances to PROFILE_SETUP).
+ * 4. PROFILE_SETUP  - Two-Column Layout:
+ *                     • Column 1 (Patient): Patient Name, Age, Language, Notes
+ *                     • Column 2 (Caregiver): Caregiver Name, Relationship, Phone Number
+ *                     • Save Button: Wrapped in <form onSubmit={handleSave}>, type="submit",
+ *                       h-14, active loading state, try/catch with visible raw error banner.
  */
 export function AuthOtpModal({
   isOpen = true,
@@ -40,43 +28,44 @@ export function AuthOtpModal({
   onAuthSuccess = () => {},
   initialEmail = ''
 }) {
-  // Modal Navigation Step: 'EMAIL' | 'PASSWORD_LOGIN' | 'OTP' | 'SET_PASSWORD' | 'PROFILE_SETUP'
+  // Active Navigation Step: 'EMAIL' | 'PASSWORD_LOGIN' | 'OTP' | 'SET_PASSWORD' | 'PROFILE_SETUP'
   const [step, setStep] = useState('EMAIL');
 
-  // Step 1 & 2: Credentials
+  // Credentials
   const [email, setEmail] = useState(initialEmail || '');
   const [password, setPassword] = useState('');
   const [otpToken, setOtpToken] = useState('');
 
-  // Step 3: Password Creation
+  // Password Configuration
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Step 5: Dual Profile Details
+  // Profile Setup (Two Columns)
+  // Column 1: Patient
   const [patientName, setPatientName] = useState('Kamala Sharma');
-  const [patientAge, setPatientAge] = useState('74');
-  const [preferredLanguage, setPreferredLanguage] = useState('en');
-  const [cognitiveNotes, setCognitiveNotes] = useState('Mild Cognitive Impairment (Early Memory Support)');
+  const [age, setAge] = useState('74');
+  const [language, setLanguage] = useState('English');
+  const [notes, setNotes] = useState('Mild Cognitive Impairment (Early Memory Support)');
 
+  // Column 2: Caregiver
   const [caregiverName, setCaregiverName] = useState('Rahul Sharma');
-  const [caregiverRelationship, setCaregiverRelationship] = useState('Daughter');
+  const [relationship, setRelationship] = useState('Daughter');
   const [caregiverPhone, setCaregiverPhone] = useState('+91 98765 43210');
 
-  // UI, Loading & Notification Banners
+  // Status & Error Banners
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [rawError, setRawError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // 60-Second Cooldown Timer for OTP Requests
+  // 60-Second Cooldown Timer for OTP
   const [cooldown, setCooldown] = useState(0);
-  const cooldownTimerRef = useRef(null);
+  const cooldownRef = useRef(null);
 
-  // Cached Session & User data across steps
-  const [activeSession, setActiveSession] = useState(null);
-  const [activeUser, setActiveUser] = useState(null);
+  // Authenticated user tracking
+  const [authenticatedUser, setAuthenticatedUser] = useState(null);
 
-  // Sync initialEmail if provided
+  // Sync initial email
   useEffect(() => {
     if (initialEmail && !email) {
       setEmail(initialEmail);
@@ -86,22 +75,22 @@ export function AuthOtpModal({
   // Handle countdown interval
   useEffect(() => {
     if (cooldown > 0) {
-      cooldownTimerRef.current = setInterval(() => {
-        setCooldown((prev) => {
-          if (prev <= 1) {
-            clearInterval(cooldownTimerRef.current);
+      cooldownRef.current = setInterval(() => {
+        setCooldown((c) => {
+          if (c <= 1) {
+            clearInterval(cooldownRef.current);
             return 0;
           }
-          return prev - 1;
+          return c - 1;
         });
       }, 1000);
     }
     return () => {
-      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
     };
   }, [cooldown]);
 
-  // Safe sound feedback with defensive fallbacks
+  // Safe sound player helper
   const playSound = (type) => {
     try {
       if (type === 'pop') window.careLoopSound?.playPop?.();
@@ -111,12 +100,8 @@ export function AuthOtpModal({
     } catch (_) {}
   };
 
-  const startCooldown = (seconds = 60) => {
-    setCooldown(seconds);
-  };
-
-  const navigateToStep = (nextStep) => {
-    setErrorMsg('');
+  const goToStep = (nextStep) => {
+    setRawError('');
     setSuccessMsg('');
     setStep(nextStep);
   };
@@ -126,18 +111,18 @@ export function AuthOtpModal({
   // --------------------------------------------------------------------------
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
-    setErrorMsg('');
+    setRawError('');
     setSuccessMsg('');
 
     const cleanEmail = email.trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      setErrorMsg('Please enter a valid email address.');
+      setRawError('Please enter a valid email address.');
       playSound('error');
       return;
     }
 
     if (cooldown > 0) {
-      setErrorMsg(`Please wait ${cooldown} seconds before requesting another code.`);
+      setRawError(`Please wait ${cooldown}s before requesting another code.`);
       return;
     }
 
@@ -145,11 +130,12 @@ export function AuthOtpModal({
     try {
       await sendEmailOtp(cleanEmail);
       playSound('pop');
-      startCooldown(60);
-      setSuccessMsg(`Verification code sent to ${cleanEmail}`);
-      navigateToStep('OTP');
+      setCooldown(60);
+      setSuccessMsg(`A 6-digit verification code was sent to ${cleanEmail}`);
+      goToStep('OTP');
     } catch (err) {
-      setErrorMsg(getFriendlyAuthErrorMessage(err));
+      console.error('[AuthOtpModal] sendEmailOtp error:', err);
+      setRawError(err.message || String(err));
       playSound('error');
     } finally {
       setLoading(false);
@@ -157,22 +143,22 @@ export function AuthOtpModal({
   };
 
   // --------------------------------------------------------------------------
-  // STEP 2: PASSWORD LOGIN FOR RETURNING USERS
+  // DIRECT PASSWORD LOGIN (RETURNING USERS)
   // --------------------------------------------------------------------------
   const handlePasswordLogin = async (e) => {
     if (e) e.preventDefault();
-    setErrorMsg('');
+    setRawError('');
     setSuccessMsg('');
 
     const cleanEmail = email.trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      setErrorMsg('Please enter your valid registered email address.');
+      setRawError('Please enter a valid email address.');
       playSound('error');
       return;
     }
 
     if (!password) {
-      setErrorMsg('Please enter your password.');
+      setRawError('Please enter your password.');
       playSound('error');
       return;
     }
@@ -181,16 +167,11 @@ export function AuthOtpModal({
     try {
       const data = await signInWithPassword(cleanEmail, password);
       playSound('success');
-
-      const user = data?.user;
-      const session = data?.session;
-      setActiveUser(user);
-      setActiveSession(session);
-
-      // Transition to Profile Setup to review or update details
-      navigateToStep('PROFILE_SETUP');
+      setAuthenticatedUser(data?.user);
+      goToStep('PROFILE_SETUP');
     } catch (err) {
-      setErrorMsg(getFriendlyAuthErrorMessage(err));
+      console.error('[AuthOtpModal] signInWithPassword error:', err);
+      setRawError(err.message || String(err));
       playSound('error');
     } finally {
       setLoading(false);
@@ -198,16 +179,16 @@ export function AuthOtpModal({
   };
 
   // --------------------------------------------------------------------------
-  // STEP 3: VERIFY 6-DIGIT OTP & ADVANCE TO SET_PASSWORD
+  // STEP 2: VERIFY 6-DIGIT OTP
   // --------------------------------------------------------------------------
   const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
-    setErrorMsg('');
+    setRawError('');
     setSuccessMsg('');
 
     const cleanToken = otpToken.trim();
     if (cleanToken.length < 6) {
-      setErrorMsg('Please enter the complete 6-digit verification code.');
+      setRawError('Please enter the full 6-digit verification code.');
       playSound('error');
       return;
     }
@@ -216,35 +197,32 @@ export function AuthOtpModal({
     try {
       const data = await verifyEmailOtp(email, cleanToken);
       playSound('success');
+      setAuthenticatedUser(data?.user);
 
-      const user = data?.user;
-      const session = data?.session;
-      setActiveUser(user);
-      setActiveSession(session);
-
-      // Rule: Verify 6-digit code and immediately advance to password creation
-      navigateToStep('SET_PASSWORD');
+      // Advance directly to password configuration
+      goToStep('SET_PASSWORD');
     } catch (err) {
-      setErrorMsg(getFriendlyAuthErrorMessage(err));
+      console.error('[AuthOtpModal] verifyEmailOtp error:', err);
+      setRawError(err.message || String(err));
       playSound('error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Resend OTP in OTP screen
+  // Resend OTP handler
   const handleResendOtp = async () => {
     if (cooldown > 0 || loading) return;
-    setErrorMsg('');
+    setRawError('');
     setSuccessMsg('');
     setLoading(true);
     try {
       await sendEmailOtp(email);
       playSound('pop');
-      startCooldown(60);
-      setSuccessMsg(`A fresh 6-digit verification code was sent to ${email}.`);
+      setCooldown(60);
+      setSuccessMsg(`A fresh verification code was sent to ${email}.`);
     } catch (err) {
-      setErrorMsg(getFriendlyAuthErrorMessage(err));
+      setRawError(err.message || String(err));
       playSound('error');
     } finally {
       setLoading(false);
@@ -252,139 +230,142 @@ export function AuthOtpModal({
   };
 
   // --------------------------------------------------------------------------
-  // STEP 4: SET PERMANENT PASSWORD (POST-OTP)
+  // STEP 3: SET PASSWORD (POST-OTP)
   // --------------------------------------------------------------------------
   const handleSetPassword = async (e) => {
     if (e) e.preventDefault();
-    setErrorMsg('');
+    setRawError('');
     setSuccessMsg('');
 
     if (!newPassword || newPassword.length < 6) {
-      setErrorMsg('Password must contain at least 6 characters.');
+      setRawError('Password must contain at least 6 characters.');
       playSound('error');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setErrorMsg('Passwords do not match. Please verify your entries.');
+      setRawError('Passwords do not match. Please verify your entries.');
       playSound('error');
       return;
     }
 
     setLoading(true);
     try {
-      const updatedData = await updateUserPassword(newPassword);
+      const updated = await updateUserPassword(newPassword);
       playSound('success');
-
-      if (updatedData?.user) {
-        setActiveUser(updatedData.user);
+      if (updated?.user) {
+        setAuthenticatedUser(updated.user);
       }
-
-      // Advance to dual profile setup
-      navigateToStep('PROFILE_SETUP');
+      goToStep('PROFILE_SETUP');
     } catch (err) {
-      setErrorMsg(getFriendlyAuthErrorMessage(err));
+      console.error('[AuthOtpModal] updateUserPassword error:', err);
+      setRawError(err.message || String(err));
       playSound('error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Optional "Skip for now" link on password setup
+  // Skip password configuration
   const handleSkipPassword = () => {
     playSound('click');
-    navigateToStep('PROFILE_SETUP');
+    goToStep('PROFILE_SETUP');
   };
 
   // --------------------------------------------------------------------------
-  // STEP 5: SAVE DUAL PROFILE (PATIENT + CAREGIVER)
+  // STEP 4: DUAL-COLUMN PROFILE SETUP (<form onSubmit={handleSave}>)
   // --------------------------------------------------------------------------
-  const handleProfileSubmit = async (e) => {
+  const handleSave = async (e) => {
     if (e) e.preventDefault();
-    setErrorMsg('');
+    setRawError('');
     setSuccessMsg('');
 
-    // Input validation with visual banner feedback instead of disabled button
+    // Input validation with visual raw error banner feedback
     if (!patientName.trim()) {
-      setErrorMsg("Please enter the patient's full name.");
+      setRawError("Please enter the patient's full name.");
       playSound('error');
       return;
     }
 
-    const parsedAge = parseInt(patientAge, 10);
+    const parsedAge = age ? parseInt(age, 10) : null;
     if (!parsedAge || parsedAge < 1 || parsedAge > 125) {
-      setErrorMsg('Please provide a valid patient age between 1 and 125.');
+      setRawError('Please enter a valid age between 1 and 125.');
       playSound('error');
       return;
     }
 
     if (!caregiverName.trim()) {
-      setErrorMsg("Please enter the caregiver's full name.");
+      setRawError("Please enter the caregiver's full name.");
       playSound('error');
       return;
     }
 
     if (!caregiverPhone.trim()) {
-      setErrorMsg('Please enter an emergency contact phone number for the caregiver.');
+      setRawError('Please enter an emergency contact phone number.');
       playSound('error');
       return;
     }
 
-    // Determine target User ID from active state or current session
-    let userId = activeUser?.id;
+    // Resolve user ID from state or Supabase session
+    let userId = authenticatedUser?.id;
     if (!userId) {
       try {
-        const user = await getCurrentUser();
-        userId = user?.id;
+        const u = await getCurrentUser();
+        userId = u?.id;
       } catch (_) {}
     }
 
     if (!userId) {
-      setErrorMsg('Authentication session was lost. Please restart the sign-in process.');
+      setRawError('User session ID not found. Please restart authentication.');
       playSound('error');
       return;
     }
 
     setLoading(true);
     try {
-      const profilePayload = {
-        id: userId,
-        patient_name: patientName.trim(),
-        patient_age: parsedAge,
-        preferred_language: preferredLanguage,
-        cognitive_notes: cognitiveNotes.trim(),
-        caregiver_name: caregiverName.trim(),
-        caregiver_relationship: caregiverRelationship,
-        caregiver_phone: caregiverPhone.trim()
-      };
+      // Calls saveCareProfile with safe database column mappings
+      await saveCareProfile(userId, {
+        patientName: patientName.trim(),
+        age: parsedAge,
+        language: language || 'English',
+        notes: notes.trim(),
+        caregiverName: caregiverName.trim(),
+        relationship: relationship || 'Daughter',
+        caregiverPhone: caregiverPhone.trim()
+      });
 
-      // Upsert into Supabase `profiles` matching authenticated user ID
-      const savedProfile = await upsertProfile(profilePayload);
       playSound('success');
 
-      // Notify parent app
-      const session = activeSession || (await getSession());
-      const user = activeUser || (await getCurrentUser());
+      // Immediately call onAuthSuccess and onClose
+      const session = await getSession();
+      const user = (await getCurrentUser()) || authenticatedUser;
 
       if (onAuthSuccess) {
         onAuthSuccess({
           session,
           user,
-          profile: savedProfile
+          profile: {
+            patientName,
+            age: parsedAge,
+            language,
+            notes,
+            caregiverName,
+            relationship,
+            caregiverPhone
+          }
         });
       }
 
-      // Close modal cleanly upon completion
       if (onClose) {
         onClose();
       }
     } catch (err) {
-      // Visually surface any Supabase upsert errors inside an alert banner instead of silently failing
-      console.error('[AuthOtpModal] Profile upsert error:', err);
-      setErrorMsg(getFriendlyAuthErrorMessage(err) || 'Failed to save profile. Please check your connection.');
+      // Surface raw error string visually in a visible red banner instead of freezing
+      console.error('[AuthOtpModal] handleSave error:', err);
+      setRawError(err.message || String(err));
       playSound('error');
     } finally {
-      // Ensure loading state is always cleared so button is never left stuck or disabled
+      // Re-enable button so it is never permanently unclickable
       setLoading(false);
     }
   };
@@ -395,7 +376,7 @@ export function AuthOtpModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-slate-900/70 backdrop-blur-sm transition-opacity animate-fade-in"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-slate-900/70 backdrop-blur-sm transition-opacity"
       onClick={(e) => {
         if (e.target === e.currentTarget && !loading) onClose();
       }}
@@ -403,11 +384,11 @@ export function AuthOtpModal({
       <div
         className={`w-full ${
           step === 'PROFILE_SETUP' ? 'max-w-3xl' : 'max-w-md'
-        } bg-white rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-900 font-sans transition-all duration-200 transform animate-scale-up`}
+        } bg-white rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-900 font-sans transition-all duration-200`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header Strip — Calm Cloud Blue Aesthetic */}
-        <header className="px-6 py-4 bg-gradient-to-r from-blue-50/90 to-slate-50 border-b border-slate-200/80 flex items-center justify-between flex-shrink-0">
+        {/* Top Header Strip */}
+        <header className="px-6 py-4 bg-gradient-to-r from-blue-50/90 to-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20">
               <span className="material-symbols-outlined text-2xl">spa</span>
@@ -419,14 +400,14 @@ export function AuthOtpModal({
               </div>
               <div className="text-[11px] font-medium text-slate-500 tracking-wide uppercase">
                 {step === 'PROFILE_SETUP'
-                  ? 'Dual Onboarding Profile'
+                  ? 'Step 4: Profile Onboarding'
                   : step === 'SET_PASSWORD'
-                  ? 'Password Setup'
+                  ? 'Step 3: Security Setup'
                   : step === 'PASSWORD_LOGIN'
                   ? 'Password Sign-In'
                   : step === 'OTP'
-                  ? 'Security Verification'
-                  : 'Cognitive Care Access'}
+                  ? 'Step 2: Token Verification'
+                  : 'Step 1: Sign In'}
               </div>
             </div>
           </div>
@@ -441,39 +422,39 @@ export function AuthOtpModal({
           </button>
         </header>
 
-        {/* Scrollable Modal Content Container (Prevents Unclickable Hidden Buttons) */}
+        {/* Scrollable Body Content */}
         <main className="p-6 md:p-8 overflow-y-auto overscroll-contain flex-1">
-          {/* Dynamic Error Alert Banner */}
-          {errorMsg && (
+          {/* Raw Error Banner */}
+          {rawError && (
             <div
               role="alert"
-              className="mb-5 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-start gap-3 animate-shake"
+              className="bg-red-50 text-red-600 p-3 rounded-xl border border-red-200 text-sm font-medium flex items-start gap-2.5 mb-5"
             >
-              <span className="material-symbols-outlined text-xl text-red-500 flex-shrink-0 mt-0.5">error</span>
-              <div className="flex-1 leading-relaxed">{errorMsg}</div>
+              <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">error</span>
+              <div className="flex-1 leading-relaxed break-words">{rawError}</div>
             </div>
           )}
 
-          {/* Dynamic Success Alert Banner */}
+          {/* Success Banner */}
           {successMsg && (
             <div
               role="status"
-              className="mb-5 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-start gap-3"
+              className="bg-emerald-50 text-emerald-800 p-3 rounded-xl border border-emerald-200 text-sm font-medium flex items-start gap-2.5 mb-5"
             >
-              <span className="material-symbols-outlined text-xl text-emerald-600 flex-shrink-0 mt-0.5">check_circle</span>
+              <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5 text-emerald-600">check_circle</span>
               <div className="flex-1 leading-relaxed">{successMsg}</div>
             </div>
           )}
 
           {/* ================================================================ */}
-          {/* SCREEN 1: 'EMAIL' (Request 6-Digit OTP via signInWithOtp)         */}
+          {/* STEP 1: EMAIL (Request OTP via signInWithOtp)                     */}
           {/* ================================================================ */}
           {step === 'EMAIL' && (
             <div>
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign In to CareLoop</h2>
                 <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-                  Enter your email to receive an instant 6-digit authentication code.
+                  Enter your email to receive a secure 6-digit authentication code.
                 </p>
               </div>
 
@@ -490,7 +471,7 @@ export function AuthOtpModal({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="caregiver@family.org"
-                      className="w-full min-h-[56px] h-14 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                      className="w-full h-14 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                     />
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl pointer-events-none">
                       mail
@@ -501,7 +482,7 @@ export function AuthOtpModal({
                 <button
                   type="submit"
                   disabled={loading || cooldown > 0}
-                  className={`w-full min-h-[56px] h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
+                  className={`w-full h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
                     loading || cooldown > 0
                       ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.99] shadow-blue-600/25'
@@ -510,22 +491,22 @@ export function AuthOtpModal({
                   {loading ? (
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
-                      <span>Sending OTP...</span>
+                      <span>Sending Code...</span>
                     </div>
                   ) : (
                     <>
-                      <span>{cooldown > 0 ? `Resend code in ${cooldown}s` : 'Send 6-Digit OTP'}</span>
+                      <span>{cooldown > 0 ? `Resend in ${cooldown}s` : 'Send 6-Digit OTP'}</span>
                       <span className="material-symbols-outlined text-xl">send</span>
                     </>
                   )}
                 </button>
               </form>
 
-              {/* Returning User Password Login Toggle */}
+              {/* Toggle to Password Login */}
               <div className="mt-6 pt-5 border-t border-slate-100 text-center">
                 <button
                   type="button"
-                  onClick={() => navigateToStep('PASSWORD_LOGIN')}
+                  onClick={() => goToStep('PASSWORD_LOGIN')}
                   className="text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors inline-flex items-center gap-2 cursor-pointer p-2"
                 >
                   <span className="material-symbols-outlined text-lg">key</span>
@@ -536,7 +517,7 @@ export function AuthOtpModal({
           )}
 
           {/* ================================================================ */}
-          {/* SCREEN 2: 'PASSWORD_LOGIN' (Returning Users via signInWithPassword) */}
+          {/* PASSWORD LOGIN (Returning Users via signInWithPassword)           */}
           {/* ================================================================ */}
           {step === 'PASSWORD_LOGIN' && (
             <div>
@@ -560,7 +541,7 @@ export function AuthOtpModal({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="caregiver@family.org"
-                      className="w-full min-h-[56px] h-14 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                      className="w-full h-14 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                     />
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl pointer-events-none">
                       mail
@@ -580,7 +561,7 @@ export function AuthOtpModal({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="w-full min-h-[56px] h-14 pl-12 pr-12 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                      className="w-full h-14 pl-12 pr-12 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                     />
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl pointer-events-none">
                       lock
@@ -601,7 +582,7 @@ export function AuthOtpModal({
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full min-h-[56px] h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
+                  className={`w-full h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
                     loading
                       ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.99] shadow-blue-600/25'
@@ -621,11 +602,10 @@ export function AuthOtpModal({
                 </button>
               </form>
 
-              {/* Toggle to OTP Access */}
               <div className="mt-6 pt-5 border-t border-slate-100 text-center">
                 <button
                   type="button"
-                  onClick={() => navigateToStep('EMAIL')}
+                  onClick={() => goToStep('EMAIL')}
                   className="text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors inline-flex items-center gap-2 cursor-pointer p-2"
                 >
                   <span className="material-symbols-outlined text-lg">mail</span>
@@ -636,14 +616,14 @@ export function AuthOtpModal({
           )}
 
           {/* ================================================================ */}
-          {/* SCREEN 3: 'OTP' (Verify 6-Digit Code via verifyOtp)               */}
+          {/* STEP 2: OTP (Verify 6-Digit Token via verifyEmailOtp)             */}
           {/* ================================================================ */}
           {step === 'OTP' && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <button
                   type="button"
-                  onClick={() => navigateToStep('EMAIL')}
+                  onClick={() => goToStep('EMAIL')}
                   className="text-slate-500 hover:text-blue-600 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors p-1"
                 >
                   <span className="material-symbols-outlined text-sm">arrow_back</span>
@@ -661,11 +641,11 @@ export function AuthOtpModal({
 
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div>
-                  <label htmlFor="otp-token-input" className="block text-center text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider">
+                  <label htmlFor="otp-token" className="block text-center text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider">
                     6-Digit Security Token
                   </label>
                   <input
-                    id="otp-token-input"
+                    id="otp-token"
                     type="text"
                     inputMode="numeric"
                     maxLength={6}
@@ -674,14 +654,14 @@ export function AuthOtpModal({
                     value={otpToken}
                     onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ''))}
                     placeholder="123456"
-                    className="w-full min-h-[56px] h-16 text-center text-3xl font-mono font-bold tracking-[10px] bg-slate-50 border-2 border-blue-500 rounded-2xl text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/15 transition-all placeholder:text-slate-300"
+                    className="w-full h-16 text-center text-3xl font-mono font-bold tracking-[10px] bg-slate-50 border-2 border-blue-500 rounded-2xl text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/15 transition-all placeholder:text-slate-300"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading || otpToken.length < 6}
-                  className={`w-full min-h-[56px] h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
+                  className={`w-full h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
                     loading || otpToken.length < 6
                       ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.99] shadow-blue-600/25'
@@ -718,7 +698,7 @@ export function AuthOtpModal({
           )}
 
           {/* ================================================================ */}
-          {/* SCREEN 4: 'SET_PASSWORD' (Post-OTP Password Configuration)        */}
+          {/* STEP 3: SET_PASSWORD (Inputs for New & Confirm Password)         */}
           {/* ================================================================ */}
           {step === 'SET_PASSWORD' && (
             <div>
@@ -729,26 +709,25 @@ export function AuthOtpModal({
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Create Permanent Password</h2>
                 <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-                  Establish a secure password so you can sign in directly on your subsequent visits.
+                  Set a password to sign in directly on future visits without requesting an email code.
                 </p>
               </div>
 
               <form onSubmit={handleSetPassword} className="space-y-4">
-                {/* Create Password */}
                 <div>
-                  <label htmlFor="create-password" className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider">
-                    Create Password (min 6 characters)
+                  <label htmlFor="new-password" className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider">
+                    New Password (min 6 characters)
                   </label>
                   <div className="relative">
                     <input
-                      id="create-password"
+                      id="new-password"
                       type={showPassword ? 'text' : 'password'}
                       required
                       minLength={6}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
-                      className="w-full min-h-[56px] h-14 pl-12 pr-12 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                      className="w-full h-14 pl-12 pr-12 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                     />
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl pointer-events-none">
                       lock
@@ -766,7 +745,6 @@ export function AuthOtpModal({
                   </div>
                 </div>
 
-                {/* Confirm Password */}
                 <div>
                   <label htmlFor="confirm-password" className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider">
                     Confirm Password
@@ -780,7 +758,7 @@ export function AuthOtpModal({
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-enter password"
-                      className="w-full min-h-[56px] h-14 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                      className="w-full h-14 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-base outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                     />
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl pointer-events-none">
                       lock_reset
@@ -791,7 +769,7 @@ export function AuthOtpModal({
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full min-h-[56px] h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
+                  className={`w-full h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
                     loading
                       ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.99] shadow-blue-600/25'
@@ -800,7 +778,7 @@ export function AuthOtpModal({
                   {loading ? (
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
-                      <span>Saving Credentials...</span>
+                      <span>Updating Credentials...</span>
                     </div>
                   ) : (
                     <>
@@ -811,33 +789,33 @@ export function AuthOtpModal({
                 </button>
               </form>
 
-              {/* Optional Skip Link */}
               <div className="mt-5 text-center">
                 <button
                   type="button"
                   onClick={handleSkipPassword}
                   className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer py-2 px-3 rounded-lg hover:bg-slate-100 inline-block"
                 >
-                  Skip for now (stick to email OTP access)
+                  Skip for now (continue using OTP exclusively)
                 </button>
               </div>
             </div>
           )}
 
           {/* ================================================================ */}
-          {/* SCREEN 5: 'PROFILE_SETUP' (Dual-Column Patient & Caregiver Setup) */}
+          {/* STEP 4: PROFILE_SETUP (Two-Column Layout for Patient & Caregiver)  */}
           {/* ================================================================ */}
           {step === 'PROFILE_SETUP' && (
             <div>
               <div className="mb-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Profile Onboarding</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Care Profile Onboarding</h2>
                 <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-                  Provide patient and primary caregiver details to personalize games, daily reminders, and emergency calling.
+                  Provide patient and caregiver details to customize care assistance, games, and emergency contacts.
                 </p>
               </div>
 
-              <form onSubmit={handleProfileSubmit} className="space-y-6">
-                {/* Two-Column Responsive Grid (md:grid-cols-2) */}
+              {/* Proper Form Wrapper */}
+              <form onSubmit={handleSave} className="space-y-6">
+                {/* Two-Column Responsive Layout */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                   {/* COLUMN 1: PATIENT DETAILS */}
                   <div className="p-5 rounded-2xl bg-blue-50/40 border border-blue-100 space-y-4">
@@ -846,10 +824,10 @@ export function AuthOtpModal({
                       <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider">Patient Details</h3>
                     </div>
 
-                    {/* Patient Full Name */}
+                    {/* Patient Name */}
                     <div>
                       <label htmlFor="patient-name" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Patient Full Name <span className="text-red-500">*</span>
+                        Patient Name <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="patient-name"
@@ -858,14 +836,14 @@ export function AuthOtpModal({
                         value={patientName}
                         onChange={(e) => setPatientName(e.target.value)}
                         placeholder="e.g. Kamala Sharma"
-                        className="w-full min-h-[56px] h-14 px-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                        className="w-full h-14 px-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                       />
                     </div>
 
-                    {/* Patient Age */}
+                    {/* Age */}
                     <div>
                       <label htmlFor="patient-age" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Patient Age <span className="text-red-500">*</span>
+                        Age <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="patient-age"
@@ -873,14 +851,14 @@ export function AuthOtpModal({
                         min="1"
                         max="125"
                         required
-                        value={patientAge}
-                        onChange={(e) => setPatientAge(e.target.value)}
+                        value={age}
+                        onChange={(e) => setAge(e.target.value)}
                         placeholder="74"
-                        className="w-full min-h-[56px] h-14 px-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                        className="w-full h-14 px-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                       />
                     </div>
 
-                    {/* Preferred Language Dropdown (English, Assamese, Bodo, Hindi) */}
+                    {/* Language Dropdown */}
                     <div>
                       <label htmlFor="patient-language" className="block text-xs font-semibold text-slate-700 mb-1.5">
                         Preferred Language
@@ -888,14 +866,14 @@ export function AuthOtpModal({
                       <div className="relative">
                         <select
                           id="patient-language"
-                          value={preferredLanguage}
-                          onChange={(e) => setPreferredLanguage(e.target.value)}
-                          className="w-full min-h-[56px] h-14 pl-4 pr-10 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer"
+                          value={language}
+                          onChange={(e) => setLanguage(e.target.value)}
+                          className="w-full h-14 pl-4 pr-10 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer"
                         >
-                          <option value="en">English</option>
-                          <option value="as">অসমীয়া (Assamese)</option>
-                          <option value="brx">बड़ो (Bodo)</option>
-                          <option value="hi">हिन्दी (Hindi)</option>
+                          <option value="English">English</option>
+                          <option value="Assamese">অসমীয়া (Assamese)</option>
+                          <option value="Bodo">बड़ो (Bodo)</option>
+                          <option value="Hindi">हिन्दी (Hindi)</option>
                         </select>
                         <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xl">
                           expand_more
@@ -903,18 +881,18 @@ export function AuthOtpModal({
                       </div>
                     </div>
 
-                    {/* Cognitive Stage / Notes */}
+                    {/* Notes */}
                     <div>
-                      <label htmlFor="cognitive-notes" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      <label htmlFor="patient-notes" className="block text-xs font-semibold text-slate-700 mb-1.5">
                         Cognitive Stage / Care Notes
                       </label>
                       <input
-                        id="cognitive-notes"
+                        id="patient-notes"
                         type="text"
-                        value={cognitiveNotes}
-                        onChange={(e) => setCognitiveNotes(e.target.value)}
-                        placeholder="e.g. Mild Memory Loss, Reminders needed"
-                        className="w-full min-h-[56px] h-14 px-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="e.g. Mild memory loss"
+                        className="w-full h-14 px-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                       />
                     </div>
                   </div>
@@ -938,21 +916,21 @@ export function AuthOtpModal({
                         value={caregiverName}
                         onChange={(e) => setCaregiverName(e.target.value)}
                         placeholder="e.g. Rahul Sharma"
-                        className="w-full min-h-[56px] h-14 px-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                        className="w-full h-14 px-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                       />
                     </div>
 
                     {/* Relationship Dropdown */}
                     <div>
-                      <label htmlFor="caregiver-relation" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      <label htmlFor="caregiver-relationship" className="block text-xs font-semibold text-slate-700 mb-1.5">
                         Relationship to Patient
                       </label>
                       <div className="relative">
                         <select
-                          id="caregiver-relation"
-                          value={caregiverRelationship}
-                          onChange={(e) => setCaregiverRelationship(e.target.value)}
-                          className="w-full min-h-[56px] h-14 pl-4 pr-10 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer"
+                          id="caregiver-relationship"
+                          value={relationship}
+                          onChange={(e) => setRelationship(e.target.value)}
+                          className="w-full h-14 pl-4 pr-10 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer"
                         >
                           <option value="Daughter">Daughter</option>
                           <option value="Son">Son</option>
@@ -968,10 +946,10 @@ export function AuthOtpModal({
                       </div>
                     </div>
 
-                    {/* Emergency Contact Phone */}
+                    {/* Phone Number */}
                     <div>
                       <label htmlFor="caregiver-phone" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Emergency Contact Phone <span className="text-red-500">*</span>
+                        Caregiver Phone Number <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -981,7 +959,7 @@ export function AuthOtpModal({
                           value={caregiverPhone}
                           onChange={(e) => setCaregiverPhone(e.target.value)}
                           placeholder="+91 98765 43210"
-                          className="w-full min-h-[56px] h-14 pl-12 pr-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                          className="w-full h-14 pl-12 pr-4 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
                         />
                         <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl pointer-events-none">
                           call
@@ -989,21 +967,20 @@ export function AuthOtpModal({
                       </div>
                     </div>
 
-                    {/* Informational Guidance Badge */}
                     <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-100 text-slate-600 text-xs flex items-start gap-2">
                       <span className="material-symbols-outlined text-base text-blue-600 flex-shrink-0 mt-0.5">info</span>
-                      <span>This number is pinned as the primary one-touch speed-dial target on the patient's companion tablet.</span>
+                      <span>Configured as the patient's primary one-touch speed dial contact.</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Save Profile Button (Explicit type="submit", active spinner, 56px height) */}
+                {/* Submit Button (Explicit type="submit", h-14, cursor-pointer, active loading state) */}
                 <div className="pt-2">
                   <button
                     type="submit"
                     id="save-profile-btn"
                     disabled={loading}
-                    className={`w-full min-h-[56px] h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
+                    className={`w-full h-14 rounded-2xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
                       loading
                         ? 'bg-blue-400 text-white cursor-wait'
                         : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.99] shadow-blue-600/25'
@@ -1012,11 +989,11 @@ export function AuthOtpModal({
                     {loading ? (
                       <div className="flex items-center gap-2">
                         <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
-                        <span>Saving Profile & Initializing CareLoop...</span>
+                        <span>Saving Profile & Initializing App...</span>
                       </div>
                     ) : (
                       <>
-                        <span>Save Profile & Enter Application</span>
+                        <span>Save &amp; Enter App</span>
                         <span className="material-symbols-outlined text-xl">login</span>
                       </>
                     )}

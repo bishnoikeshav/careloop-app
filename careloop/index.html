@@ -1688,30 +1688,21 @@
 
     const profilePayload = {
       id: userId,
-      patient_name: patientName,
-      patient_age: patientAge,
+      full_name: patientName,
+      name: patientName,
+      age: patientAge,
+      role: 'caregiver',
       preferred_language: preferredLanguage,
-      cognitive_notes: cognitiveNotes,
-      caregiver_name: caregiverName,
-      caregiver_relationship: caregiverRelationship,
-      caregiver_phone: caregiverPhone
+      phone: caregiverPhone,
+      relationship: caregiverRelationship,
+      notes: cognitiveNotes
     };
 
     try {
       if (client) {
         const { error: upsertErr } = await client.from('profiles').upsert(profilePayload, { onConflict: 'id' });
         if (upsertErr) {
-          if (upsertErr.code === '42703') {
-            await client.from('profiles').upsert({
-              id: userId,
-              name: patientName,
-              age: patientAge,
-              role: 'patient',
-              preferred_language: preferredLanguage
-            }, { onConflict: 'id' });
-          } else {
-            throw upsertErr;
-          }
+          throw upsertErr;
         }
 
         try {
