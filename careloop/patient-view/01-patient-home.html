@@ -555,6 +555,13 @@
 
         setAuthLoading(true);
 
+        window.careLoopSound = window.careLoopSound || {
+          playPop: () => {},
+          playSuccess: () => {},
+          playError: () => {},
+          playClick: () => {}
+        };
+
         if (authMode === 'password') {
           if (!password) {
             setAuthError('Please enter your password.');
@@ -568,7 +575,11 @@
               setAuthLoading(false);
               return;
             }
-            if (window.careLoopSound) window.careLoopSound.playSuccess();
+            try {
+              window.careLoopSound?.playSuccess?.();
+            } catch (err) {
+              console.warn("Audio playback skipped:", err);
+            }
             const user = data.user;
             const displayName = (user && user.user_metadata && user.user_metadata.full_name) || email.split('@')[0];
             setFullName(displayName);
@@ -589,7 +600,11 @@
               setAuthLoading(false);
               return;
             }
-            if (window.careLoopSound) window.careLoopSound.playPop();
+            try {
+              window.careLoopSound?.playPop?.();
+            } catch (err) {
+              console.warn("Audio playback skipped:", err);
+            }
             setStep(2);
           } catch(err) {
             setAuthError(err.message || 'Network error sending OTP.');
@@ -628,7 +643,11 @@
             return;
           }
 
-          if (window.careLoopSound) window.careLoopSound.playSuccess();
+          try {
+            window.careLoopSound?.playSuccess?.();
+          } catch (err) {
+            console.warn("Audio playback skipped:", err);
+          }
           const user = data.user;
           const displayName = (user && user.user_metadata && user.user_metadata.full_name) || email.split('@')[0];
           setFullName(displayName);

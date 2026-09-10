@@ -993,6 +993,16 @@
   }
 
   // ═══════════════════════════════════════
+  //  SOUND HELPER SAFE INITIALIZATION
+  // ═══════════════════════════════════════
+  window.careLoopSound = window.careLoopSound || {
+    playPop: () => {},
+    playSuccess: () => {},
+    playError: () => {},
+    playClick: () => {}
+  };
+
+  // ═══════════════════════════════════════
   //  HACKATHON DEMO AUTHENTICATION (PROTOTYPE MODAL)
   // ═══════════════════════════════════════
   let isAppLoading = true;
@@ -1152,7 +1162,11 @@
           return;
         }
 
-        if (window.careLoopSound) window.careLoopSound.playSuccess();
+        try {
+          window.careLoopSound?.playSuccess?.();
+        } catch (err) {
+          console.warn("Audio playback skipped:", err);
+        }
         const user = data.user;
         const displayName = (user && user.user_metadata && user.user_metadata.full_name) || email.split('@')[0];
         completeAuthSuccess(displayName, 'caregiver', email);
@@ -1178,7 +1192,11 @@
           return;
         }
 
-        if (window.careLoopSound) window.careLoopSound.playPop();
+        try {
+          window.careLoopSound?.playPop?.();
+        } catch (err) {
+          console.warn("Audio playback skipped:", err);
+        }
         const sentToEl = document.getElementById('auth-otp-sent-to');
         if (sentToEl) sentToEl.textContent = email;
 
@@ -1224,7 +1242,11 @@
         return;
       }
 
-      if (window.careLoopSound) window.careLoopSound.playSuccess();
+      try {
+        window.careLoopSound?.playSuccess?.();
+      } catch (err) {
+        console.warn("Audio playback skipped:", err);
+      }
       const user = data.user;
       const displayName = (user && user.user_metadata && user.user_metadata.full_name) || authPendingEmail.split('@')[0];
 
@@ -1277,7 +1299,11 @@
     localStorage.setItem('careloop_patient_name', name);
     localStorage.setItem('careloop_user_role', role);
 
-    if (window.careLoopSound) window.careLoopSound.playSuccess();
+    try {
+      window.careLoopSound?.playSuccess?.();
+    } catch (err) {
+      console.warn("Audio playback skipped:", err);
+    }
     applyAuthenticatedProfile(currentUser);
     closeLoginModal();
     isAuthenticated = true;

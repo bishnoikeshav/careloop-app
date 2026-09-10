@@ -160,6 +160,64 @@ class CareLoopSound {
       osc.stop(this.ctx.currentTime + 0.28);
     } catch (e) {}
   }
+
+  // Playful pop sound effect
+  playPop() {
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(350, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.06);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.07);
+    } catch (e) {}
+  }
+
+  // Success chime
+  playSuccess() {
+    this.playMatch();
+  }
+
+  // Error alert tone
+  playError() {
+    this.playMismatch();
+  }
 }
 
-window.careLoopSound = new CareLoopSound();
+try {
+  window.careLoopSound = new CareLoopSound();
+} catch (e) {
+  window.careLoopSound = {
+    playPop: () => {},
+    playSuccess: () => {},
+    playError: () => {},
+    playClick: () => {},
+    playCardFlip: () => {},
+    playMatch: () => {},
+    playMismatch: () => {},
+    startRinging: () => {},
+    stopRinging: () => {},
+    playHangup: () => {}
+  };
+}
+
+// Ensure safe initialization fallback is always defined on window
+window.careLoopSound = window.careLoopSound || {
+  playPop: () => {},
+  playSuccess: () => {},
+  playError: () => {},
+  playClick: () => {},
+  playCardFlip: () => {},
+  playMatch: () => {},
+  playMismatch: () => {},
+  startRinging: () => {},
+  stopRinging: () => {},
+  playHangup: () => {}
+};
